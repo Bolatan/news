@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchArticles, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
+import RssSidebar from '@/components/RssSidebar';
 import { COMMUNITY_FROM_SLUG } from '@/lib/utils';
 import { MapPin, ChevronRight, RefreshCw } from 'lucide-react';
 
@@ -62,46 +63,55 @@ export default function CommunityPage({ slug, onNavigate }: CommunityPageProps) 
         News and stories from the {communityName} community in the Ikorodu division.
       </p>
 
-      {articles.length === 0 ? (
-        <div className="text-center py-16 bg-neutral-50 rounded-lg">
-          <RefreshCw className="w-8 h-8 text-neutral-300 mx-auto mb-4" />
-          <p className="text-neutral-500 mb-2">
-            No stories tagged for {communityName} yet.
-          </p>
-          <p className="text-sm text-neutral-400 mb-6">
-            Try updating the news feeds — new stories from Nigerian news sources
-            are tagged automatically when they mention this community.
-          </p>
-          <button
-            onClick={() => onNavigate('/')}
-            className="text-red-600 font-semibold hover:underline"
-          >
-            Back to Home
-          </button>
-        </div>
-      ) : (
-        <>
-          {articles[0] && (
-            <div className="mb-8 pb-8 border-b border-neutral-200">
-              <ArticleCard
-                article={articles[0]}
-                onNavigate={onNavigate}
-                variant="hero"
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          {articles.length === 0 ? (
+            <div className="text-center py-16 bg-neutral-50 rounded-lg border border-neutral-200">
+              <RefreshCw className="w-8 h-8 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-500 mb-2">
+                No stories tagged for {communityName} yet.
+              </p>
+              <p className="text-sm text-neutral-400 mb-6">
+                Try updating the news feeds — new stories from Nigerian news sources
+                are tagged automatically when they mention this community.
+              </p>
+              <button
+                onClick={() => onNavigate('/')}
+                className="text-red-600 font-semibold hover:underline"
+              >
+                Back to Home
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {articles[0] && (
+                <div className="pb-8 border-b border-neutral-200">
+                  <ArticleCard
+                    article={articles[0]}
+                    onNavigate={onNavigate}
+                    variant="hero"
+                  />
+                </div>
+              )}
+              {articles.length > 1 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {articles.slice(1).map((article) => (
+                    <ArticleCard
+                      key={article.slug}
+                      article={article}
+                      onNavigate={onNavigate}
+                      variant="standard"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.slice(1).map((article) => (
-              <ArticleCard
-                key={article.slug}
-                article={article}
-                onNavigate={onNavigate}
-                variant="standard"
-              />
-            ))}
-          </div>
-        </>
-      )}
+        </div>
+        <div className="lg:col-span-1">
+          <RssSidebar onNavigate={onNavigate} />
+        </div>
+      </div>
     </div>
   );
 }

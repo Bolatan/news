@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchArticles, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
+import RssSidebar from '@/components/RssSidebar';
 import { ChevronRight, Hash } from 'lucide-react';
 
 type TagPageProps = {
@@ -63,41 +64,50 @@ export default function TagPage({ tag, onNavigate }: TagPageProps) {
         Discover articles tagged with <strong className="text-neutral-900">#{decodedTag}</strong> from across the Ikorodu division.
       </p>
 
-      {articles.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-neutral-200 rounded-lg">
-          <p className="text-neutral-500 font-medium">
-            No news items are currently tagged with "#{decodedTag}".
-          </p>
-          <button
-            onClick={() => onNavigate('/')}
-            className="mt-4 bg-red-600 text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Back to Home
-          </button>
-        </div>
-      ) : (
-        <>
-          {articles[0] && (
-            <div className="mb-8 pb-8 border-b border-neutral-200">
-              <ArticleCard
-                article={articles[0]}
-                onNavigate={onNavigate}
-                variant="hero"
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          {articles.length === 0 ? (
+            <div className="text-center py-16 border-2 border-dashed border-neutral-200 rounded-lg">
+              <p className="text-neutral-500 font-medium">
+                No news items are currently tagged with "#{decodedTag}".
+              </p>
+              <button
+                onClick={() => onNavigate('/')}
+                className="mt-4 bg-red-600 text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Back to Home
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {articles[0] && (
+                <div className="pb-8 border-b border-neutral-200">
+                  <ArticleCard
+                    article={articles[0]}
+                    onNavigate={onNavigate}
+                    variant="hero"
+                  />
+                </div>
+              )}
+              {articles.length > 1 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {articles.slice(1).map((article) => (
+                    <ArticleCard
+                      key={article.slug}
+                      article={article}
+                      onNavigate={onNavigate}
+                      variant="standard"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.slice(1).map((article) => (
-              <ArticleCard
-                key={article.slug}
-                article={article}
-                onNavigate={onNavigate}
-                variant="standard"
-              />
-            ))}
-          </div>
-        </>
-      )}
+        </div>
+        <div className="lg:col-span-1">
+          <RssSidebar onNavigate={onNavigate} />
+        </div>
+      </div>
     </div>
   );
 }
