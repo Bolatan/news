@@ -303,7 +303,16 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               {rssArticles.length === 0 ? (
                 <div className="py-6 text-center text-neutral-500 text-xs space-y-2">
                   <p>No RSS news items found.</p>
-                  <p className="text-[11px] text-neutral-400">Click "Update Feeds" at the top of the page to pull live stories from Nigerian news channels.</p>
+                  <p className="text-[11px] text-neutral-400">
+                    Click{' '}
+                    <button
+                      onClick={() => onNavigate('/admin')}
+                      className="text-red-600 hover:underline font-semibold"
+                    >
+                      "Update Feeds"
+                    </button>{' '}
+                    in the Admin Dashboard to pull live stories from Nigerian news channels.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
@@ -359,7 +368,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <p className="text-sm text-neutral-600 leading-relaxed mb-3">
                 IGBE News automatically pulls stories from {feedStatus?.sources ?? 'multiple'}{' '}
                 Nigerian news sources via RSS feeds. Stories mentioning Ikorodu or its
-                communities are tagged and organized automatically. Use the "Update Feeds"
+                communities are tagged and organized automatically. Use the{' '}
+                <button
+                  onClick={() => onNavigate('/admin')}
+                  className="text-red-600 hover:underline font-semibold"
+                >
+                  "Update Feeds"
+                </button>{' '}
                 button in the Admin Dashboard to fetch the latest stories.
               </p>
               <p className="text-xs text-neutral-500">
