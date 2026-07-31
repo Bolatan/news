@@ -80,10 +80,21 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
     );
   }
 
-  const paragraphs = article.body.split('\n\n').filter((p) => p.trim());
   const communityPath = article.community
     ? `/community/${COMMUNITY_SLUGS[article.community] ?? ''}`
     : null;
+
+  const getFormattedBody = (bodyText: string) => {
+    if (!bodyText) return '';
+    const hasHtml = /<[a-z][\s\S]*>/i.test(bodyText);
+    if (hasHtml) {
+      return bodyText;
+    }
+    return bodyText
+      .split(/\n\s*\n/)
+      .map(para => `<p>${para.replace(/\n/g, '<br />')}</p>`)
+      .join('');
+  };
 
   return (
     <article className="max-w-3xl mx-auto px-4 py-6">
@@ -119,6 +130,20 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
       <p className="text-lg text-neutral-600 leading-relaxed mb-6">
         {article.summary}
       </p>
+
+      {article.tags && article.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {article.tags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => onNavigate(`/tag/${encodeURIComponent(tag)}`)}
+              className="text-xs bg-neutral-100 hover:bg-red-50 text-neutral-600 hover:text-red-600 border border-neutral-200 hover:border-red-600 transition-all font-semibold px-2.5 py-1.5 rounded-full flex items-center"
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-neutral-200 mb-6">
         <div className="flex items-center gap-3">
@@ -190,20 +215,10 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
         )}
       </div>
 
-      <div className="prose prose-lg max-w-none">
-        {paragraphs.map((para, i) => (
-          <p
-            key={i}
-            className={`text-neutral-800 leading-relaxed mb-5 ${
-              i === 0
-                ? 'text-lg first-letter:text-5xl first-letter:font-bold first-letter:text-red-600 first-letter:mr-2 first-letter:float-left first-letter:leading-none'
-                : ''
-            }`}
-          >
-            {para}
-          </p>
-        ))}
-      </div>
+      <div
+        className="prose prose-rich-text prose-lg max-w-none text-neutral-800"
+        dangerouslySetInnerHTML={{ __html: getFormattedBody(article.body) }}
+      />
 
       {article.isAggregated && article.sourceUrl && (
         <div className="mt-6 mb-4 p-4 bg-neutral-50 rounded-lg border border-neutral-200">

@@ -61,6 +61,58 @@ export default function AdminPage() {
   const [body, setBody] = useState('');
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [community, setCommunity] = useState<string>('');
+  const [tagsInput, setTagsInput] = useState('');
+
+  const insertHtmlTag = (tagType: string) => {
+    const textarea = document.getElementById('articleBodyTextarea') as HTMLTextAreaElement;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+
+    let replacement = '';
+    switch (tagType) {
+      case 'p':
+        replacement = `<p>${selected || 'Paragraph content'}</p>`;
+        break;
+      case 'strong':
+        replacement = `<strong>${selected || 'bold text'}</strong>`;
+        break;
+      case 'em':
+        replacement = `<em>${selected || 'italic text'}</em>`;
+        break;
+      case 'h2':
+        replacement = `<h2 class="text-xl font-bold mt-4 mb-2 text-neutral-900">${selected || 'Subheading'}</h2>`;
+        break;
+      case 'li':
+        replacement = `<li>${selected || 'List item'}</li>`;
+        break;
+      case 'link':
+        replacement = `<a href="https://" class="text-red-600 underline">${selected || 'link text'}</a>`;
+        break;
+      case 'autop': {
+        const cleanBody = body.trim();
+        if (!cleanBody) return;
+        const autopFormatted = cleanBody
+          .split(/\n\s*\n/)
+          .map(p => p.startsWith('<p>') ? p : `<p>${p.replace(/\n/g, '<br />')}</p>`)
+          .join('\n\n');
+        setBody(autopFormatted);
+        return;
+      }
+      default:
+        return;
+    }
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    setBody(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+    }, 50);
+  };
   const [imageUrl, setImageUrl] = useState('');
   const [imageCredit, setImageCredit] = useState('');
   const [author, setAuthor] = useState('Admin');
@@ -162,6 +214,7 @@ export default function AdminPage() {
       videoUrl: videoUrl || null,
       videoType,
       mediaToDisplay,
+      tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
     };
 
     try {
@@ -198,6 +251,7 @@ export default function AdminPage() {
       setVideoUrl(article.videoUrl || '');
       setVideoType(article.videoType || 'none');
       setMediaToDisplay(article.mediaToDisplay || 'image');
+      setTagsInput(Array.isArray(article.tags) ? article.tags.join(', ') : '');
     } else {
       setEditingArticle(null);
       setTitle('');
@@ -215,6 +269,7 @@ export default function AdminPage() {
       setVideoUrl('');
       setVideoType('none');
       setMediaToDisplay('image');
+      setTagsInput('');
     }
     setIsArticleModalOpen(true);
   };
@@ -725,14 +780,86 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-700">Full Body Article (Markdown style support) *</label>
+                <label className="text-xs font-semibold text-neutral-700">Tags (Comma-separated, e.g. Roads, Infrastructure, Business)</label>
+                <input
+                  type="text"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  className="border border-neutral-300 rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-red-600"
+                  placeholder="Enter tags separated by commas..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-neutral-700">Full Body Article (Rich Text / HTML Format) *</label>
+                  <div className="flex flex-wrap gap-1 bg-neutral-100 p-1 rounded-md border border-neutral-200">
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('p')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="Paragraph"
+                    >
+                      Paragraph
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('strong')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="Bold"
+                    >
+                      Bold
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('em')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="Italic"
+                    >
+                      Italic
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('h2')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="Heading 2"
+                    >
+                      Heading 2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('li')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="List Item"
+                    >
+                      List Item
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('link')}
+                      className="text-[10px] font-bold bg-white hover:bg-neutral-50 px-2 py-1 rounded border border-neutral-200 transition-colors"
+                      title="Link"
+                    >
+                      Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertHtmlTag('autop')}
+                      className="text-[10px] font-bold bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200 transition-colors"
+                      title="Convert plain text double newlines to HTML paragraphs automatically"
+                    >
+                      Auto-P Convert
+                    </button>
+                  </div>
+                </div>
                 <textarea
+                  id="articleBodyTextarea"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   required
-                  rows={6}
-                  className="border border-neutral-300 rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-red-600"
-                  placeholder="Type the full article here. Break paragraphs with empty lines..."
+                  rows={8}
+                  className="border border-neutral-300 rounded-lg p-2.5 text-sm outline-none focus:ring-1 focus:ring-red-600 font-mono"
+                  placeholder="Type the full article here. Use the toolbar above or write HTML elements..."
                 />
               </div>
 
