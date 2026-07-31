@@ -99,8 +99,10 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
             </button>
             <div className="hidden md:block w-px h-6 bg-neutral-200" />
             <button
-              onClick={() => onNavigate('/')}
-              className="hidden md:block text-sm font-semibold text-neutral-700 hover:text-red-600 transition-colors"
+              onClick={() => onNavigate('/login')}
+              className={`hidden md:block text-sm font-semibold hover:text-red-600 transition-colors ${
+                isActive('/login') ? 'text-red-600' : 'text-neutral-700'
+              }`}
             >
               Sign In
             </button>
@@ -237,6 +239,18 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
                 {community}
               </button>
             ))}
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide pt-3 pb-1">
+              Account
+            </p>
+            <button
+              onClick={() => {
+                onNavigate('/login');
+                setMenuOpen(false);
+              }}
+              className="w-full text-left py-2.5 text-sm font-semibold text-neutral-800 border-b border-neutral-100"
+            >
+              Sign In
+            </button>
           </div>
         </nav>
       )}

@@ -142,7 +142,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
         const extractedTags = [...new Set([
           category,
           ...(community ? [community] : []),
-          ...itemCategories.map(c => typeof c === 'string' ? c : (c as any)?._ || '').filter(Boolean)
+          ...itemCategories.map(c => typeof c === 'string' ? c : (c as { _?: string })?._ || '').filter(Boolean)
         ])].map(t => t.trim()).filter(t => t.length > 0 && t.length < 50);
 
         await collection.insertOne({
