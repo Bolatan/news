@@ -11,6 +11,7 @@ import {
   fetchSettings,
   updateSettings,
   uploadMediaFile,
+  refreshFeeds,
   type Article,
   type User,
 } from '@/lib/api';
@@ -55,6 +56,11 @@ export default function AdminPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
+  // Refresh feeds state
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState('');
+  const [refreshError, setRefreshError] = useState(false);
+
   // Article Form Fields
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
@@ -93,6 +99,24 @@ export default function AdminPage() {
       // ignore
     }
     setLoadingArticles(false);
+  };
+
+  const handleRefreshFeeds = async () => {
+    setRefreshing(true);
+    setRefreshMsg('');
+    setRefreshError(false);
+    try {
+      const result = await refreshFeeds();
+      setRefreshMsg(
+        `${result.added} new stories added from ${result.errors === 0 ? 'all' : 'some'} feeds`,
+      );
+      await loadArticles();
+    } catch {
+      setRefreshError(true);
+      setRefreshMsg('Could not refresh feeds right now');
+    }
+    setRefreshing(false);
+    setTimeout(() => setRefreshMsg(''), 5000);
   };
 
   const loadUsers = async () => {
@@ -306,33 +330,50 @@ export default function AdminPage() {
           <h1 className="text-3xl font-extrabold text-neutral-900 tracking-tight">Admin Dashboard</h1>
           <p className="text-neutral-500 text-sm">Manage news stories, community editors, and homepage media layout.</p>
         </div>
-        <div className="flex bg-neutral-100 p-1 rounded-lg">
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setActiveTab('articles')}
-            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
-              activeTab === 'articles' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            onClick={handleRefreshFeeds}
+            disabled={refreshing}
+            className="bg-neutral-800 hover:bg-neutral-950 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors"
           >
-            News Articles
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Updating Feeds...' : 'Update Feeds'}
           </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
-              activeTab === 'users' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Users/Editors
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
-              activeTab === 'settings' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Homepage Hero Config
-          </button>
+
+          <div className="flex bg-neutral-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('articles')}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                activeTab === 'articles' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              News Articles
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                activeTab === 'users' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Users/Editors
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                activeTab === 'settings' ? 'bg-white shadow-sm text-red-600' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              Homepage Hero Config
+            </button>
+          </div>
         </div>
       </div>
+
+      {refreshMsg && (
+        <div className={`mb-6 p-4 rounded-lg text-sm font-semibold border ${refreshError ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+          {refreshMsg}
+        </div>
+      )}
 
       {/* ARTICLES TAB */}
       {activeTab === 'articles' && (
