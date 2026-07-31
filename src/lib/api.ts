@@ -21,6 +21,12 @@ export type Article = {
   videoUrl?: string | null;
   videoType?: 'youtube' | 'upload' | 'none';
   mediaToDisplay?: 'image' | 'video';
+  tags?: string[];
+};
+
+export type TagInfo = {
+  name: string;
+  count: number;
 };
 
 export type User = {
@@ -52,6 +58,7 @@ export async function fetchArticles(params?: {
   breaking?: boolean;
   limit?: number;
   source?: 'aggregated' | 'editorial';
+  tag?: string;
 }): Promise<Article[]> {
   const qs = new URLSearchParams();
   if (params?.category) qs.set('category', params.category);
@@ -60,8 +67,13 @@ export async function fetchArticles(params?: {
   if (params?.breaking) qs.set('breaking', 'true');
   if (params?.limit) qs.set('limit', String(params.limit));
   if (params?.source) qs.set('source', params.source);
+  if (params?.tag) qs.set('tag', params.tag);
   const query = qs.toString();
   return apiFetch<Article[]>(`/articles${query ? `?${query}` : ''}`);
+}
+
+export async function fetchTags(): Promise<TagInfo[]> {
+  return apiFetch<TagInfo[]>('/tags');
 }
 
 export async function fetchArticleBySlug(slug: string): Promise<Article | null> {

@@ -117,7 +117,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
 
         const rawContent = item.contentSnippet || item.summary || item.content || '';
         const summary = stripHtml(rawContent).slice(0, 300);
-        const fullContent = stripHtml(item['content:encoded'] || item.content || summary);
+        const fullContent = item['content:encoded'] || item.content || rawContent || summary;
 
         const combinedText = `${title} ${summary}`;
 
@@ -138,6 +138,13 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
           continue;
         }
 
+        const itemCategories = Array.isArray(item.categories) ? item.categories : [];
+        const extractedTags = [...new Set([
+          category,
+          ...(community ? [community] : []),
+          ...itemCategories.map(c => typeof c === 'string' ? c : (c as any)?._ || '').filter(Boolean)
+        ])].map(t => t.trim()).filter(t => t.length > 0 && t.length < 50);
+
         await collection.insertOne({
           title,
           slug,
@@ -151,7 +158,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
           community,
           isFeatured: false,
           isBreaking: title.match(/breaking|urgent|alert/i) !== null,
-          readTimeMinutes: Math.max(2, Math.ceil(fullContent.split(/\s+/).length / 200)),
+          readTimeMinutes: Math.max(2, Math.ceil(stripHtml(fullContent).split(/\s+/).length / 200)),
           publishedAt: pubDate,
           source: source.name,
           sourceUrl: item.link,
@@ -159,6 +166,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
           videoUrl: null,
           videoType: 'none',
           mediaToDisplay: 'image',
+          tags: extractedTags,
         });
         feedAdded++;
       }
@@ -326,11 +334,31 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// Unique tags retrieval endpoint
+app.get('/api/tags', async (_req, res) => {
+  try {
+    const db = await getDb();
+    const tags = await db
+      .collection('articles')
+      .aggregate([
+        { $match: { tags: { $exists: true, $ne: null } } },
+        { $unwind: '$tags' },
+        { $group: { _id: '$tags', count: { $sum: 1 } } },
+        { $sort: { count: -1, _id: 1 } },
+        { $project: { name: '$_id', count: 1, _id: 0 } },
+      ])
+      .toArray();
+    res.json(tags);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
 // Articles CRUD & Extended endpoints
 app.get('/api/articles', async (req, res) => {
   try {
     const db = await getDb();
-    const { category, community, featured, breaking, limit, source } = req.query;
+    const { category, community, featured, breaking, limit, source, tag } = req.query;
 
     const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
@@ -339,6 +367,9 @@ app.get('/api/articles', async (req, res) => {
     if (breaking === 'true') filter.isBreaking = true;
     if (source === 'aggregated') filter.isAggregated = true;
     if (source === 'editorial') filter.isAggregated = { $ne: true };
+    if (tag) {
+      filter.tags = { $regex: new RegExp(`^${String(tag).trim()}$`, 'i') };
+    }
 
     const articles = await db
       .collection('articles')
@@ -372,6 +403,7 @@ app.post('/api/articles', async (req, res) => {
       videoUrl,
       videoType,
       mediaToDisplay,
+      tags,
     } = req.body;
 
     if (!title || !body || !category) {
@@ -380,10 +412,13 @@ app.post('/api/articles', async (req, res) => {
     }
 
     const slug = slugify(`${title}-${Date.now()}`);
+    const inputTags = Array.isArray(tags) ? tags.map((t: string) => t.trim()).filter(Boolean) : [];
+    const finalTags = [...new Set([category, ...(community ? [community] : []), ...inputTags])];
+
     const newArticle = {
       title,
       slug,
-      summary: summary || body.slice(0, 300),
+      summary: summary || stripHtml(body).slice(0, 300),
       body,
       category,
       imageUrl: imageUrl || null,
@@ -393,12 +428,13 @@ app.post('/api/articles', async (req, res) => {
       community: community || null,
       isFeatured: !!isFeatured,
       isBreaking: !!isBreaking,
-      readTimeMinutes: Number(readTimeMinutes) || Math.max(2, Math.ceil(body.split(/\s+/).length / 200)),
+      readTimeMinutes: Number(readTimeMinutes) || Math.max(2, Math.ceil(stripHtml(body).split(/\s+/).length / 200)),
       publishedAt: new Date(),
       isAggregated: false,
       videoUrl: videoUrl || null,
       videoType: videoType || 'none', // 'youtube' | 'upload' | 'none'
       mediaToDisplay: mediaToDisplay || 'image', // 'image' | 'video'
+      tags: finalTags,
     };
 
     const result = await db.collection('articles').insertOne(newArticle);
@@ -428,11 +464,15 @@ app.put('/api/articles/:id', async (req, res) => {
       videoUrl,
       videoType,
       mediaToDisplay,
+      tags,
     } = req.body;
+
+    const inputTags = Array.isArray(tags) ? tags.map((t: string) => t.trim()).filter(Boolean) : [];
+    const finalTags = [...new Set([category, ...(community ? [community] : []), ...inputTags])];
 
     const updateFields: Record<string, unknown> = {
       title,
-      summary,
+      summary: summary || stripHtml(body).slice(0, 300),
       body,
       category,
       imageUrl,
@@ -442,10 +482,11 @@ app.put('/api/articles/:id', async (req, res) => {
       community,
       isFeatured: !!isFeatured,
       isBreaking: !!isBreaking,
-      readTimeMinutes: Number(readTimeMinutes) || 3,
+      readTimeMinutes: Number(readTimeMinutes) || Math.max(2, Math.ceil(stripHtml(body).split(/\s+/).length / 200)),
       videoUrl,
       videoType,
       mediaToDisplay,
+      tags: finalTags,
       updatedAt: new Date(),
     };
 

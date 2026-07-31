@@ -7,6 +7,7 @@ import CategoryPage from '@/pages/CategoryPage';
 import CommunityPage from '@/pages/CommunityPage';
 import SearchPage from '@/pages/SearchPage';
 import AdminPage from '@/pages/AdminPage';
+import TagPage from '@/pages/TagPage';
 
 export default function App() {
   const [route, setRoute] = useState('/');
@@ -34,6 +35,10 @@ export default function App() {
     if (route.startsWith('/community/')) {
       const slug = route.replace('/community/', '');
       return <CommunityPage slug={slug} onNavigate={navigate} />;
+    }
+    if (route.startsWith('/tag/')) {
+      const tag = route.replace('/tag/', '');
+      return <TagPage tag={tag} onNavigate={navigate} />;
     }
     if (route.startsWith('/search')) {
       const url = new URL(`http://x${route}`);

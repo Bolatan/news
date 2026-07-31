@@ -17,7 +17,7 @@ export default function CommunityPage({ slug, onNavigate }: CommunityPageProps) 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const data = await fetchArticles({ community: communityName, limit: 50 });
+      const data = await fetchArticles({ tag: communityName, limit: 50 });
       setArticles(data);
       setLoading(false);
       window.scrollTo(0, 0);

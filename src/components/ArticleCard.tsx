@@ -147,6 +147,22 @@ export default function ArticleCard({
           <p className="text-neutral-200 text-sm sm:text-base leading-relaxed mb-3 line-clamp-2">
             {article.summary}
           </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3 z-20">
+              {article.tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/tag/${encodeURIComponent(tag)}`);
+                  }}
+                  className="text-[10px] sm:text-xs bg-white/20 hover:bg-red-600 text-white border border-white/20 hover:border-red-600 px-2.5 py-0.5 rounded-full transition-all font-semibold"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-3 text-xs text-neutral-300">
             <span className="font-semibold">{article.author}</span>
             <span>·</span>
@@ -210,6 +226,22 @@ export default function ArticleCard({
           <p className="text-neutral-600 text-sm leading-relaxed mb-2 line-clamp-2">
             {article.summary}
           </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {article.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/tag/${encodeURIComponent(tag)}`);
+                  }}
+                  className="text-[10px] bg-neutral-100 hover:bg-red-50 text-neutral-600 hover:text-red-600 border border-neutral-200 hover:border-red-600 px-2 py-0.5 rounded transition-all font-semibold"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span className="font-semibold text-neutral-700">{article.author}</span>
             <span>·</span>
@@ -305,6 +337,22 @@ export default function ArticleCard({
           <p className="text-neutral-600 text-sm leading-relaxed mb-1 line-clamp-2 hidden sm:block">
             {article.summary}
           </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {article.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/tag/${encodeURIComponent(tag)}`);
+                  }}
+                  className="text-[10px] bg-neutral-100 hover:bg-red-50 text-neutral-600 hover:text-red-600 border border-neutral-200 hover:border-red-600 px-2 py-0.5 rounded transition-all font-semibold"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span className="font-semibold text-neutral-700">{article.author}</span>
             <span>·</span>
@@ -381,6 +429,22 @@ export default function ArticleCard({
         <p className="text-neutral-600 text-sm leading-relaxed mb-2 line-clamp-2">
           {article.summary}
         </p>
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {article.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate(`/tag/${encodeURIComponent(tag)}`);
+                }}
+                className="text-[10px] bg-neutral-100 hover:bg-red-50 text-neutral-600 hover:text-red-600 border border-neutral-200 hover:border-red-600 px-2 py-0.5 rounded transition-all font-semibold"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-700">{article.author}</span>
           <span>·</span>

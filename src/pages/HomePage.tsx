@@ -32,18 +32,36 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   const [byCategory, setByCategory] = useState<Record<string, Article[]>>({});
   const [byCommunity, setByCommunity] = useState<Record<string, Article[]>>({});
   const [feedStatus, setFeedStatus] = useState<FeedStatus | null>(null);
+  const [popularTags, setPopularTags] = useState<{ name: string; count: number }[]>([]);
+  const [rssArticles, setRssArticles] = useState<Article[]>([]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      const [featuredArticles, allArticles, breakingArticles, status, homeSettings] = await Promise.all([
+      const [featuredArticles, allArticles, breakingArticles, status, homeSettings, rssData] = await Promise.all([
         fetchArticles({ featured: true, limit: 1 }),
         fetchArticles({ limit: 50 }),
         fetchArticles({ breaking: true, limit: 6 }),
         fetchFeedStatus().catch(() => null),
         fetchSettings().catch(() => null),
+        fetchArticles({ source: 'aggregated', limit: 15 }).catch(() => []),
       ]);
+
+      // Calculate popular tags from fetched articles
+      const tagCounts: Record<string, number> = {};
+      allArticles.forEach((art) => {
+        if (Array.isArray(art.tags)) {
+          art.tags.forEach((tag) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        }
+      });
+      const sortedTags = Object.entries(tagCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+      setPopularTags(sortedTags);
 
       // Determine the hero article based on Pinned Hero settings or standard featured fallback
       let hero: Article | null = null;
@@ -70,16 +88,21 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       setSecondary(remaining.slice(0, 4));
       setLatest(remaining.slice(4, 10));
       setFeedStatus(status);
+      setRssArticles(rssData);
 
       const catMap: Record<string, Article[]> = {};
       for (const cat of CATEGORIES) {
-        catMap[cat] = allArticles.filter((a) => a.category === cat).slice(0, 4);
+        catMap[cat] = allArticles.filter((a) =>
+          Array.isArray(a.tags) && a.tags.some(t => t.toLowerCase() === cat.toLowerCase())
+        ).slice(0, 4);
       }
       setByCategory(catMap);
 
       const commMap: Record<string, Article[]> = {};
       for (const community of COMMUNITIES) {
-        commMap[community] = allArticles.filter((a) => a.community === community).slice(0, 3);
+        commMap[community] = allArticles.filter((a) =>
+          Array.isArray(a.tags) && a.tags.some(t => t.toLowerCase() === community.toLowerCase())
+        ).slice(0, 3);
       }
       setByCommunity(commMap);
       setLoading(false);
@@ -126,6 +149,24 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           )}
         </div>
 
+        {popularTags.length > 0 && (
+          <div className="mb-8 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-neutral-500 mb-3">Trending Tags:</h3>
+            <div className="flex flex-wrap gap-2">
+              {popularTags.map((tag) => (
+                <button
+                  key={tag.name}
+                  onClick={() => onNavigate(`/tag/${encodeURIComponent(tag.name)}`)}
+                  className="text-xs bg-white border border-neutral-200 hover:border-red-600 hover:bg-red-50 text-neutral-700 hover:text-red-600 transition-all font-semibold px-3 py-1.5 rounded shadow-sm flex items-center gap-1.5"
+                >
+                  <span>#{tag.name}</span>
+                  <span className="text-[10px] text-neutral-400 bg-neutral-100 rounded-full w-4 h-4 flex items-center justify-center font-normal">{tag.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {featured && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
             <div className="lg:col-span-2">
@@ -147,87 +188,13 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           </div>
         )}
 
-        {secondary.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 pb-12 border-b border-neutral-200">
-            {secondary.map((article) => (
-              <ArticleCard
-                key={article.slug}
-                article={article}
-                onNavigate={onNavigate}
-                variant="standard"
-              />
-            ))}
-          </div>
-        )}
-
-        {latest.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3">
-                Latest News
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8">
-              {latest.map((article) => (
-                <ArticleCard
-                  key={article.slug}
-                  article={article}
-                  onNavigate={onNavigate}
-                  variant="list"
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-red-600" />
-              Communities
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {COMMUNITIES.map((community) => {
-              const count = feedStatus?.byCommunity[community] ?? byCommunity[community]?.length ?? 0;
-              return (
-                <button
-                  key={community}
-                  onClick={() => onNavigate(`/community/${COMMUNITY_SLUGS[community]}`)}
-                  className="group flex items-center justify-between p-4 rounded-lg border border-neutral-200 hover:border-red-600 hover:bg-red-50 transition-all text-left"
-                >
-                  <div>
-                    <p className="font-semibold text-neutral-900 group-hover:text-red-600 transition-colors">
-                      {community}
-                    </p>
-                    <p className="text-xs text-neutral-500">{count} stories</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-red-600 transition-colors" />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {CATEGORIES.map((cat) => {
-          const catArticles = byCategory[cat] ?? [];
-          if (catArticles.length === 0) return null;
-          return (
-            <section key={cat} className="mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3">
-                  {cat}
-                </h2>
-                <button
-                  onClick={() => onNavigate(`/category/${CATEGORY_SLUGS[cat]}`)}
-                  className="flex items-center gap-1 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors"
-                >
-                  More {cat}
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {catArticles.map((article) => (
+        {/* Main Content Layout with 2-column Right Sidebar Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+          {/* Left Column (Main Feed Content) */}
+          <div className="lg:col-span-3 space-y-12">
+            {secondary.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12 border-b border-neutral-200">
+                {secondary.map((article) => (
                   <ArticleCard
                     key={article.slug}
                     article={article}
@@ -236,9 +203,149 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                   />
                 ))}
               </div>
+            )}
+
+            {latest.length > 0 && (
+              <section className="pb-12 border-b border-neutral-200">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3">
+                    Latest News
+                  </h2>
+                </div>
+                <div className="space-y-4">
+                  {latest.map((article) => (
+                    <ArticleCard
+                      key={article.slug}
+                      article={article}
+                      onNavigate={onNavigate}
+                      variant="list"
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="pb-12 border-b border-neutral-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-red-600" />
+                  Communities
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {COMMUNITIES.map((community) => {
+                  const count = feedStatus?.byCommunity[community] ?? byCommunity[community]?.length ?? 0;
+                  return (
+                    <button
+                      key={community}
+                      onClick={() => onNavigate(`/community/${COMMUNITY_SLUGS[community]}`)}
+                      className="group flex items-center justify-between p-4 rounded-lg border border-neutral-200 hover:border-red-600 hover:bg-red-50 transition-all text-left"
+                    >
+                      <div>
+                        <p className="font-semibold text-neutral-900 group-hover:text-red-600 transition-colors">
+                          {community}
+                        </p>
+                        <p className="text-xs text-neutral-500">{count} stories</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-red-600 transition-colors" />
+                    </button>
+                  );
+                })}
+              </div>
             </section>
-          );
-        })}
+
+            {CATEGORIES.map((cat) => {
+              const catArticles = byCategory[cat] ?? [];
+              if (catArticles.length === 0) return null;
+              return (
+                <section key={cat} className="pb-12 border-b border-neutral-200 last:border-b-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-neutral-900 border-l-4 border-red-600 pl-3">
+                      {cat}
+                    </h2>
+                    <button
+                      onClick={() => onNavigate(`/category/${CATEGORY_SLUGS[cat]}`)}
+                      className="flex items-center gap-1 text-sm font-semibold text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      More {cat}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {catArticles.map((article) => (
+                      <ArticleCard
+                        key={article.slug}
+                        article={article}
+                        onNavigate={onNavigate}
+                        variant="standard"
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          {/* Right Column (RSS Right Sidebar) */}
+          <aside className="lg:col-span-1">
+            <div className="sticky top-20 bg-neutral-50 border border-neutral-200 rounded-lg p-5 shadow-sm space-y-6">
+              <div className="border-b border-neutral-200 pb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-2">
+                  <Rss className="w-4 h-4 text-red-600" />
+                  Live RSS Feed
+                </h2>
+                <span className="animate-pulse flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                </span>
+              </div>
+
+              {rssArticles.length === 0 ? (
+                <div className="py-6 text-center text-neutral-500 text-xs space-y-2">
+                  <p>No RSS news items found.</p>
+                  <p className="text-[11px] text-neutral-400">Click "Update Feeds" at the top of the page to pull live stories from Nigerian news channels.</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
+                  {rssArticles.map((art) => (
+                    <article
+                      key={art.slug}
+                      onClick={() => onNavigate(`/article/${art.slug}`)}
+                      className="group cursor-pointer block border-b border-neutral-200 last:border-0 pb-3 last:pb-0"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] text-red-600 font-bold uppercase tracking-wide mb-1">
+                        <span>{art.source}</span>
+                      </div>
+                      <h3 className="text-neutral-900 text-xs font-semibold leading-snug group-hover:text-red-600 transition-colors line-clamp-3 mb-1.5">
+                        {art.title}
+                      </h3>
+                      {art.tags && art.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {art.tags.slice(0, 3).map(tag => (
+                            <span
+                              key={tag}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onNavigate(`/tag/${encodeURIComponent(tag)}`);
+                              }}
+                              className="text-[9px] bg-neutral-200/60 hover:bg-red-50 hover:text-red-600 text-neutral-600 px-1.5 py-0.5 rounded transition-all font-medium"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-neutral-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{new Date(art.publishedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
 
         <section className="mb-4 bg-neutral-50 rounded-lg p-6">
           <div className="flex items-start gap-4">
