@@ -85,18 +85,22 @@ export default function Footer({ onNavigate }: FooterProps) {
               About
             </h4>
             <ul className="space-y-2.5">
-              {['About Us', 'Contact', 'Advertise', 'Careers', 'Editorial Standards'].map(
-                (link) => (
-                  <li key={link}>
-                    <button
-                      onClick={() => onNavigate('/')}
-                      className="text-sm hover:text-red-500 transition-colors text-left"
-                    >
-                      {link}
-                    </button>
-                  </li>
-                ),
-              )}
+              {[
+                { name: 'About Us', path: '/about' },
+                { name: 'Contact', path: '/contact' },
+                { name: 'Advertise', path: '/advertise' },
+                { name: 'Careers', path: '/careers' },
+                { name: 'Editorial Standards', path: '/editorial-standards' },
+              ].map((link) => (
+                <li key={link.name}>
+                  <button
+                    onClick={() => onNavigate(link.path)}
+                    className="text-sm hover:text-red-500 transition-colors text-left"
+                  >
+                    {link.name}
+                  </button>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

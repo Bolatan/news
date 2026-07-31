@@ -8,6 +8,11 @@ import CommunityPage from '@/pages/CommunityPage';
 import SearchPage from '@/pages/SearchPage';
 import AdminPage from '@/pages/AdminPage';
 import TagPage from '@/pages/TagPage';
+import AboutUsPage from '@/pages/AboutUsPage';
+import ContactPage from '@/pages/ContactPage';
+import AdvertisePage from '@/pages/AdvertisePage';
+import CareersPage from '@/pages/CareersPage';
+import EditorialStandardsPage from '@/pages/EditorialStandardsPage';
 
 export default function App() {
   const [route, setRoute] = useState('/');
@@ -23,6 +28,21 @@ export default function App() {
     }
     if (route === '/') {
       return <HomePage onNavigate={navigate} />;
+    }
+    if (route === '/about') {
+      return <AboutUsPage onNavigate={navigate} />;
+    }
+    if (route === '/contact') {
+      return <ContactPage onNavigate={navigate} />;
+    }
+    if (route === '/advertise') {
+      return <AdvertisePage onNavigate={navigate} />;
+    }
+    if (route === '/careers') {
+      return <CareersPage onNavigate={navigate} />;
+    }
+    if (route === '/editorial-standards') {
+      return <EditorialStandardsPage onNavigate={navigate} />;
     }
     if (route.startsWith('/article/')) {
       const slug = route.replace('/article/', '');
