@@ -253,7 +253,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 IGBE News automatically pulls stories from {feedStatus?.sources ?? 'multiple'}{' '}
                 Nigerian news sources via RSS feeds. Stories mentioning Ikorodu or its
                 communities are tagged and organized automatically. Use the "Update Feeds"
-                button in the top bar to fetch the latest stories.
+                button in the Admin Dashboard to fetch the latest stories.
               </p>
               <p className="text-xs text-neutral-500">
                 Sources include Punch, Vanguard, The Guardian, Premium Times, Channels TV,

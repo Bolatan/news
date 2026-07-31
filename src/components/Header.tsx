@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Search, Menu, X, Clock, MapPin, RefreshCw } from 'lucide-react';
+import { Search, Menu, X, Clock, MapPin } from 'lucide-react';
 import { CATEGORIES, CATEGORY_SLUGS, COMMUNITIES, COMMUNITY_SLUGS } from '@/lib/utils';
-import { refreshFeeds } from '@/lib/api';
 
 type HeaderProps = {
   onNavigate: (path: string) => void;
@@ -13,8 +12,6 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshMsg, setRefreshMsg] = useState('');
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -29,22 +26,6 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
       setMenuOpen(false);
       setSearchQuery('');
     }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setRefreshMsg('');
-    try {
-      const result = await refreshFeeds();
-      setRefreshMsg(
-        `${result.added} new stories added from ${result.errors === 0 ? 'all' : 'some'} feeds`,
-      );
-      setTimeout(() => onNavigate('/'), 500);
-    } catch {
-      setRefreshMsg('Could not refresh feeds right now');
-    }
-    setRefreshing(false);
-    setTimeout(() => setRefreshMsg(''), 4000);
   };
 
   const isActive = (path: string) => currentPath === path;
@@ -69,23 +50,9 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
               <MapPin className="w-3 h-3" />
               Ikorodu Division, Lagos
             </span>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Updating...' : 'Update Feeds'}
-            </button>
           </div>
         </div>
       </div>
-
-      {refreshMsg && (
-        <div className="bg-green-600 text-white text-xs px-4 py-1.5 text-center">
-          {refreshMsg}
-        </div>
-      )}
 
       <div className="border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
@@ -270,14 +237,6 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
                 {community}
               </button>
             ))}
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-full text-left py-2.5 text-sm font-semibold text-red-600 flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Updating feeds...' : 'Update News Feeds'}
-            </button>
           </div>
         </nav>
       )}
