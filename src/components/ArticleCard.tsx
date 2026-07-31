@@ -63,6 +63,22 @@ export default function ArticleCard({
           <p className="text-neutral-200 text-sm sm:text-base leading-relaxed mb-3 line-clamp-2">
             {article.summary}
           </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {article.tags.map((t) => (
+                <button
+                  key={t}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/tag/${t}`);
+                  }}
+                  className="bg-black/45 backdrop-blur-sm text-neutral-200 hover:text-white text-xs font-semibold px-2 py-0.5 rounded transition-colors"
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-3 text-xs text-neutral-300">
             <span className="font-semibold">{article.author}</span>
             <span>·</span>
@@ -109,6 +125,22 @@ export default function ArticleCard({
         <p className="text-neutral-600 text-sm leading-relaxed mb-2 line-clamp-2">
           {article.summary}
         </p>
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {article.tags.map((t) => (
+              <button
+                key={t}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate(`/tag/${t}`);
+                }}
+                className="text-xs text-red-600 hover:underline font-medium"
+              >
+                #{t}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-700">{article.author}</span>
           <span>·</span>
@@ -196,6 +228,22 @@ export default function ArticleCard({
           <p className="text-neutral-600 text-sm leading-relaxed mb-1 line-clamp-2 hidden sm:block">
             {article.summary}
           </p>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {article.tags.map((t) => (
+                <button
+                  key={t}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/tag/${t}`);
+                  }}
+                  className="text-xs text-red-600 hover:underline font-medium"
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <span className="font-semibold text-neutral-700">{article.author}</span>
             <span>·</span>
@@ -255,6 +303,22 @@ export default function ArticleCard({
       <p className="text-neutral-600 text-sm leading-relaxed mb-2 line-clamp-2">
         {article.summary}
       </p>
+      {article.tags && article.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {article.tags.map((t) => (
+            <button
+              key={t}
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate(`/tag/${t}`);
+              }}
+              className="text-xs text-red-600 hover:underline font-medium"
+            >
+              #{t}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2 text-xs text-neutral-500">
         <span className="font-semibold text-neutral-700">{article.author}</span>
         <span>·</span>

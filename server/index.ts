@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import RSSParser from 'rss-parser';
 import {
   FEED_SOURCES,
@@ -71,6 +71,34 @@ function extractImage(item: { [key: string]: unknown }): string | null {
   return null;
 }
 
+function generateTags(title: string, summary: string, category: string): string[] {
+  const text = `${title} ${summary} ${category}`.toLowerCase();
+  const tagsSet = new Set<string>();
+
+  if (category) {
+    tagsSet.add(category.toLowerCase());
+  }
+
+  const keywordMap: Record<string, string[]> = {
+    'infrastructure': ['road', 'bridge', 'drainage', 'electric', 'power', 'water', 'pipe', 'transformer', 'construction', 'building'],
+    'emergency': ['accident', 'crash', 'fire', 'explosion', 'outbreak', 'cholera', 'flood', 'collapse'],
+    'education': ['school', 'student', 'teacher', 'waec', 'neco', 'jamb', 'university', 'college', 'coaching'],
+    'healthcare': ['hospital', 'doctor', 'nurse', 'medical', 'clinic', 'vaccine', 'health', 'maternity'],
+    'business': ['market', 'traders', 'economy', 'naira', 'finance', 'business', 'stall', 'shop', 'rice mill', 'factory'],
+    'sports': ['football', 'fc', 'win', 'match', 'goal', 'stadium', 'athletics', 'sports'],
+    'politics': ['politics', 'governor', 'government', 'sanwo-olu', 'reform', 'commissioner', 'law'],
+    'culture': ['festival', 'traditional', 'king', 'palace', 'culture', 'dance', 'actress', 'nollywood', 'film']
+  };
+
+  for (const [tag, keywords] of Object.entries(keywordMap)) {
+    if (keywords.some(kw => text.includes(kw))) {
+      tagsSet.add(tag);
+    }
+  }
+
+  return Array.from(tagsSet);
+}
+
 async function refreshFeeds(): Promise<{ added: number; skipped: number; errors: number }> {
   const db = await getDb();
   const collection = db.collection('articles');
@@ -92,7 +120,8 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
 
         const rawContent = item.contentSnippet || item.summary || item.content || '';
         const summary = stripHtml(rawContent).slice(0, 300);
-        const fullContent = stripHtml(item['content:encoded'] || item.content || summary);
+        // Preserve HTML in fullContent
+        const fullContent = item['content:encoded'] || item.content || rawContent || summary;
 
         const combinedText = `${title} ${summary}`;
 
@@ -106,6 +135,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
         const slug = slugify(`${title}-${item.isoDate || Date.now()}`);
         const pubDate = item.isoDate ? new Date(item.isoDate) : new Date();
         const imageUrl = extractImage(item);
+        const tags = generateTags(title, rawContent, category);
 
         const existing = await collection.findOne({ slug });
         if (existing) {
@@ -126,11 +156,12 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
           community,
           isFeatured: false,
           isBreaking: title.match(/breaking|urgent|alert/i) !== null,
-          readTimeMinutes: Math.max(2, Math.ceil(fullContent.split(/\s+/).length / 200)),
+          readTimeMinutes: Math.max(2, Math.ceil(stripHtml(fullContent).split(/\s+/).length / 200)),
           publishedAt: pubDate,
           source: source.name,
           sourceUrl: item.link,
           isAggregated: true,
+          tags,
         });
         feedAdded++;
       }
@@ -154,7 +185,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
 app.get('/api/articles', async (req, res) => {
   try {
     const db = await getDb();
-    const { category, community, featured, breaking, limit, source } = req.query;
+    const { category, community, featured, breaking, limit, source, tag } = req.query;
 
     const filter: Record<string, unknown> = {};
     if (category) filter.category = category;
@@ -163,6 +194,7 @@ app.get('/api/articles', async (req, res) => {
     if (breaking === 'true') filter.isBreaking = true;
     if (source === 'aggregated') filter.isAggregated = true;
     if (source === 'editorial') filter.isAggregated = { $ne: true };
+    if (tag) filter.tags = String(tag).toLowerCase();
 
     const articles = await db
       .collection('articles')
@@ -174,6 +206,18 @@ app.get('/api/articles', async (req, res) => {
     res.json(articles);
   } catch {
     res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+app.get('/api/tags', async (_req, res) => {
+  try {
+    const db = await getDb();
+    const tags = await db.collection('articles').distinct('tags');
+    const sortedTags = tags.filter((t: any) => typeof t === 'string' && t.trim() !== '').map((t: string) => t.toLowerCase());
+    const uniqueTags = Array.from(new Set(sortedTags)).sort();
+    res.json(uniqueTags);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch tags' });
   }
 });
 
@@ -249,6 +293,7 @@ app.get('/api/search', async (req, res) => {
           { author: { $regex: q, $options: 'i' } },
           { location: { $regex: q, $options: 'i' } },
           { community: { $regex: q, $options: 'i' } },
+          { tags: { $regex: q, $options: 'i' } },
         ],
       })
       .sort({ publishedAt: -1 })
@@ -293,17 +338,180 @@ app.get('/api/feeds/status', async (_req, res) => {
 app.post('/api/seed', async (req, res) => {
   try {
     const db = await getDb();
-    const articles = req.body;
+    const articlesData = req.body;
 
-    if (!Array.isArray(articles)) {
+    if (!Array.isArray(articlesData)) {
       res.status(400).json({ error: 'Expected an array of articles' });
       return;
     }
 
-    const result = await db.collection('articles').insertMany(articles);
+    const preparedArticles = articlesData.map((article: any) => {
+      const tags = Array.isArray(article.tags)
+        ? article.tags
+        : generateTags(article.title, article.summary || article.body, article.category);
+      return {
+        ...article,
+        publishedAt: article.publishedAt ? new Date(article.publishedAt) : new Date(),
+        created_at: article.created_at ? new Date(article.created_at) : new Date(),
+        updated_at: article.updated_at ? new Date(article.updated_at) : new Date(),
+        tags: tags.map((t: string) => t.toLowerCase().trim()).filter(Boolean),
+      };
+    });
+
+    const result = await db.collection('articles').insertMany(preparedArticles);
     res.json({ inserted: result.insertedCount });
-  } catch {
-    res.status(500).json({ error: 'Seeding failed' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Seeding failed: ' + err.message });
+  }
+});
+
+// Admin endpoints for CRUD operations
+app.post('/api/articles', async (req, res) => {
+  try {
+    const db = await getDb();
+    const {
+      title,
+      summary,
+      body,
+      category,
+      imageUrl,
+      imageCredit,
+      author,
+      location,
+      community,
+      isFeatured,
+      isBreaking,
+      readTimeMinutes,
+      tags,
+    } = req.body;
+
+    if (!title || !body || !category || !author) {
+      res.status(400).json({ error: 'Title, body, category, and author are required' });
+      return;
+    }
+
+    const baseSlug = slugify(title);
+    const slug = `${baseSlug}-${Date.now()}`;
+
+    const parsedTags = Array.isArray(tags)
+      ? tags.map(t => t.trim().toLowerCase()).filter(Boolean)
+      : generateTags(title, summary || body, category);
+
+    const article = {
+      title,
+      slug,
+      summary: summary || stripHtml(body).slice(0, 150),
+      body,
+      category,
+      imageUrl: imageUrl || null,
+      imageCredit: imageCredit || null,
+      author,
+      location: location || null,
+      community: community || null,
+      isFeatured: !!isFeatured,
+      isBreaking: !!isBreaking,
+      readTimeMinutes: Number(readTimeMinutes) || 3,
+      publishedAt: new Date(),
+      created_at: new Date(),
+      updated_at: new Date(),
+      tags: parsedTags,
+      isAggregated: false,
+    };
+
+    const result = await db.collection('articles').insertOne(article);
+    res.status(201).json({ ...article, _id: result.insertedId });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to create article: ' + err.message });
+  }
+});
+
+app.put('/api/articles/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const idStr = req.params.id;
+    let queryId: any;
+    try {
+      queryId = new ObjectId(idStr);
+    } catch {
+      queryId = idStr;
+    }
+
+    const {
+      title,
+      summary,
+      body,
+      category,
+      imageUrl,
+      imageCredit,
+      author,
+      location,
+      community,
+      isFeatured,
+      isBreaking,
+      readTimeMinutes,
+      tags,
+    } = req.body;
+
+    const updateData: Record<string, any> = {};
+    if (title !== undefined) {
+      updateData.title = title;
+      updateData.slug = `${slugify(title)}-${Date.now()}`;
+    }
+    if (summary !== undefined) updateData.summary = summary;
+    if (body !== undefined) updateData.body = body;
+    if (category !== undefined) updateData.category = category;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl || null;
+    if (imageCredit !== undefined) updateData.imageCredit = imageCredit || null;
+    if (author !== undefined) updateData.author = author;
+    if (location !== undefined) updateData.location = location || null;
+    if (community !== undefined) updateData.community = community || null;
+    if (isFeatured !== undefined) updateData.isFeatured = !!isFeatured;
+    if (isBreaking !== undefined) updateData.isBreaking = !!isBreaking;
+    if (readTimeMinutes !== undefined) updateData.readTimeMinutes = Number(readTimeMinutes) || 3;
+    if (tags !== undefined) {
+      updateData.tags = Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+    }
+    updateData.updated_at = new Date();
+
+    const result = await db.collection('articles').updateOne(
+      { $or: [{ _id: queryId }, { id: idStr }] },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update article: ' + err.message });
+  }
+});
+
+app.delete('/api/articles/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const idStr = req.params.id;
+    let queryId: any;
+    try {
+      queryId = new ObjectId(idStr);
+    } catch {
+      queryId = idStr;
+    }
+
+    const result = await db.collection('articles').deleteOne({
+      $or: [{ _id: queryId }, { id: idStr }]
+    });
+
+    if (result.deletedCount === 0) {
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete article: ' + err.message });
   }
 });
 

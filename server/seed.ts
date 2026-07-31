@@ -8,6 +8,34 @@ const DB_NAME = 'igbe_news';
 const now = Date.now();
 const hoursAgo = (h: number) => new Date(now - h * 3600_000);
 
+function generateTags(title: string, summary: string, category: string): string[] {
+  const text = `${title} ${summary} ${category}`.toLowerCase();
+  const tagsSet = new Set<string>();
+
+  if (category) {
+    tagsSet.add(category.toLowerCase());
+  }
+
+  const keywordMap: Record<string, string[]> = {
+    'infrastructure': ['road', 'bridge', 'drainage', 'electric', 'power', 'water', 'pipe', 'transformer', 'construction', 'building'],
+    'emergency': ['accident', 'crash', 'fire', 'explosion', 'outbreak', 'cholera', 'flood', 'collapse'],
+    'education': ['school', 'student', 'teacher', 'waec', 'neco', 'jamb', 'university', 'college', 'coaching'],
+    'healthcare': ['hospital', 'doctor', 'nurse', 'medical', 'clinic', 'vaccine', 'health', 'maternity'],
+    'business': ['market', 'traders', 'economy', 'naira', 'finance', 'business', 'stall', 'shop', 'rice mill', 'factory'],
+    'sports': ['football', 'fc', 'win', 'match', 'goal', 'stadium', 'athletics', 'sports'],
+    'politics': ['politics', 'governor', 'government', 'sanwo-olu', 'reform', 'commissioner', 'law'],
+    'culture': ['festival', 'traditional', 'king', 'palace', 'culture', 'dance', 'actress', 'nollywood', 'film']
+  };
+
+  for (const [tag, keywords] of Object.entries(keywordMap)) {
+    if (keywords.some(kw => text.includes(kw))) {
+      tagsSet.add(tag);
+    }
+  }
+
+  return Array.from(tagsSet);
+}
+
 const articles = [
   {
     title: 'Ikorodu Road Expansion Project Reaches Milestone as Construction Enters Final Phase',
@@ -563,7 +591,16 @@ async function main() {
   const db = client.db(DB_NAME);
 
   await db.collection('articles').drop().catch(() => {});
-  const result = await db.collection('articles').insertMany(articles);
+
+  const preparedArticles = articles.map((article: any) => {
+    const tags = generateTags(article.title, article.summary || article.body, article.category);
+    return {
+      ...article,
+      tags: tags.map(t => t.toLowerCase().trim()).filter(Boolean),
+    };
+  });
+
+  const result = await db.collection('articles').insertMany(preparedArticles);
   await db.collection('articles').createIndex({ slug: 1 }, { unique: true });
   await db.collection('articles').createIndex({ category: 1 });
   await db.collection('articles').createIndex({ community: 1 });

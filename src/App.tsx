@@ -6,6 +6,8 @@ import ArticlePage from '@/pages/ArticlePage';
 import CategoryPage from '@/pages/CategoryPage';
 import CommunityPage from '@/pages/CommunityPage';
 import SearchPage from '@/pages/SearchPage';
+import TagPage from '@/pages/TagPage';
+import AdminPage from '@/pages/AdminPage';
 
 export default function App() {
   const [route, setRoute] = useState('/');
@@ -19,6 +21,9 @@ export default function App() {
     if (route === '/') {
       return <HomePage onNavigate={navigate} />;
     }
+    if (route === '/admin') {
+      return <AdminPage onNavigate={navigate} />;
+    }
     if (route.startsWith('/article/')) {
       const slug = route.replace('/article/', '');
       return <ArticlePage slug={slug} onNavigate={navigate} />;
@@ -30,6 +35,10 @@ export default function App() {
     if (route.startsWith('/community/')) {
       const slug = route.replace('/community/', '');
       return <CommunityPage slug={slug} onNavigate={navigate} />;
+    }
+    if (route.startsWith('/tag/')) {
+      const tag = route.replace('/tag/', '');
+      return <TagPage tag={tag} onNavigate={navigate} />;
     }
     if (route.startsWith('/search')) {
       const url = new URL(`http://x${route}`);

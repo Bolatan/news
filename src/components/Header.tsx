@@ -123,10 +123,10 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
             </button>
             <div className="hidden md:block w-px h-6 bg-neutral-200" />
             <button
-              onClick={() => onNavigate('/')}
+              onClick={() => onNavigate('/admin')}
               className="hidden md:block text-sm font-semibold text-neutral-700 hover:text-red-600 transition-colors"
             >
-              Sign In
+              Admin Panel
             </button>
           </div>
         </div>
@@ -233,6 +233,15 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
               className="w-full text-left py-2.5 text-sm font-semibold text-neutral-800 border-b border-neutral-100"
             >
               Home
+            </button>
+            <button
+              onClick={() => {
+                onNavigate('/admin');
+                setMenuOpen(false);
+              }}
+              className="w-full text-left py-2.5 text-sm font-semibold text-red-600 border-b border-neutral-100"
+            >
+              Admin Panel
             </button>
             {CATEGORIES.map((cat) => (
               <button

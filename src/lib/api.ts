@@ -18,6 +18,7 @@ export type Article = {
   source?: string;
   sourceUrl?: string;
   isAggregated?: boolean;
+  tags?: string[];
 };
 
 async function apiFetch<T>(path: string): Promise<T> {
@@ -35,6 +36,7 @@ export async function fetchArticles(params?: {
   breaking?: boolean;
   limit?: number;
   source?: 'aggregated' | 'editorial';
+  tag?: string;
 }): Promise<Article[]> {
   const qs = new URLSearchParams();
   if (params?.category) qs.set('category', params.category);
@@ -43,6 +45,7 @@ export async function fetchArticles(params?: {
   if (params?.breaking) qs.set('breaking', 'true');
   if (params?.limit) qs.set('limit', String(params.limit));
   if (params?.source) qs.set('source', params.source);
+  if (params?.tag) qs.set('tag', params.tag);
   const query = qs.toString();
   return apiFetch<Article[]>(`/articles${query ? `?${query}` : ''}`);
 }
@@ -82,4 +85,45 @@ export async function fetchFeedStatus(): Promise<{
   sources: number;
 }> {
   return apiFetch('/api/feeds/status');
+}
+
+export async function fetchTags(): Promise<string[]> {
+  return apiFetch<string[]>('/tags');
+}
+
+export async function createArticle(article: Partial<Article>): Promise<Article> {
+  const res = await fetch('/api/articles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(article),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to create article (${res.status})`);
+  }
+  return res.json() as Promise<Article>;
+}
+
+export async function updateArticle(id: string, article: Partial<Article>): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/articles/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(article),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to update article (${res.status})`);
+  }
+  return res.json() as Promise<{ success: boolean }>;
+}
+
+export async function deleteArticle(id: string): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/articles/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to delete article (${res.status})`);
+  }
+  return res.json() as Promise<{ success: boolean }>;
 }

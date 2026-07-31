@@ -95,21 +95,34 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
         Back
       </button>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <button
           onClick={() => onNavigate(`/category/${CATEGORY_SLUGS[article.category]}`)}
-          className="bg-red-600 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded hover:bg-red-700 transition-colors"
+          className="bg-red-600 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded hover:bg-red-700 transition-colors shrink-0"
         >
           {article.category}
         </button>
         {article.community && communityPath && (
           <button
             onClick={() => onNavigate(communityPath)}
-            className="bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded hover:bg-neutral-300 transition-colors flex items-center gap-1"
+            className="bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded hover:bg-neutral-300 transition-colors flex items-center gap-1 shrink-0"
           >
             <MapPin className="w-3 h-3" />
             {article.community}
           </button>
+        )}
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 sm:ml-2 sm:border-l sm:border-neutral-300 sm:pl-3">
+            {article.tags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => onNavigate(`/tag/${tag}`)}
+                className="bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -190,20 +203,27 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
         )}
       </div>
 
-      <div className="prose prose-lg max-w-none">
-        {paragraphs.map((para, i) => (
-          <p
-            key={i}
-            className={`text-neutral-800 leading-relaxed mb-5 ${
-              i === 0
-                ? 'text-lg first-letter:text-5xl first-letter:font-bold first-letter:text-red-600 first-letter:mr-2 first-letter:float-left first-letter:leading-none'
-                : ''
-            }`}
-          >
-            {para}
-          </p>
-        ))}
-      </div>
+      {/<\/?[a-z][\s\S]*>/i.test(article.body) ? (
+        <div
+          className="prose prose-lg max-w-none text-neutral-800 leading-relaxed mb-5 rich-text-body"
+          dangerouslySetInnerHTML={{ __html: article.body }}
+        />
+      ) : (
+        <div className="prose prose-lg max-w-none">
+          {paragraphs.map((para, i) => (
+            <p
+              key={i}
+              className={`text-neutral-800 leading-relaxed mb-5 ${
+                i === 0
+                  ? 'text-lg first-letter:text-5xl first-letter:font-bold first-letter:text-red-600 first-letter:mr-2 first-letter:float-left first-letter:leading-none'
+                  : ''
+              }`}
+            >
+              {para}
+            </p>
+          ))}
+        </div>
+      )}
 
       {article.isAggregated && article.sourceUrl && (
         <div className="mt-6 mb-4 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
