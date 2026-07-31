@@ -6,6 +6,7 @@ import ArticlePage from '@/pages/ArticlePage';
 import CategoryPage from '@/pages/CategoryPage';
 import CommunityPage from '@/pages/CommunityPage';
 import SearchPage from '@/pages/SearchPage';
+import AdminPage from '@/pages/AdminPage';
 
 export default function App() {
   const [route, setRoute] = useState('/');
@@ -16,6 +17,9 @@ export default function App() {
   }, []);
 
   const renderPage = () => {
+    if (route === '/admin') {
+      return <AdminPage />;
+    }
     if (route === '/') {
       return <HomePage onNavigate={navigate} />;
     }

@@ -18,10 +18,27 @@ export type Article = {
   source?: string;
   sourceUrl?: string;
   isAggregated?: boolean;
+  videoUrl?: string | null;
+  videoType?: 'youtube' | 'upload' | 'none';
+  mediaToDisplay?: 'image' | 'video';
 };
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`/api${path}`);
+export type User = {
+  _id?: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt?: string;
+};
+
+export type HomepageSettings = {
+  pinnedHeroArticleId: string | null;
+  pinnedHeroType: 'none' | 'article';
+};
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`/api${path}`, options);
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
   }
@@ -82,4 +99,79 @@ export async function fetchFeedStatus(): Promise<{
   sources: number;
 }> {
   return apiFetch('/api/feeds/status');
+}
+
+// Admin API calls
+
+export async function fetchUsers(): Promise<User[]> {
+  return apiFetch<User[]>('/users');
+}
+
+export async function createUser(user: Omit<User, '_id'>): Promise<User> {
+  return apiFetch<User>('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+}
+
+export async function updateUser(id: string, user: Partial<User>): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>(`/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+}
+
+export async function deleteUser(id: string): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>(`/users/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createArticle(article: Omit<Article, '_id' | 'slug' | 'publishedAt'>): Promise<Article> {
+  return apiFetch<Article>('/articles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(article),
+  });
+}
+
+export async function updateArticle(id: string, article: Partial<Article>): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>(`/articles/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(article),
+  });
+}
+
+export async function deleteArticle(id: string): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>(`/articles/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchSettings(): Promise<HomepageSettings> {
+  return apiFetch<HomepageSettings>('/settings');
+}
+
+export async function updateSettings(settings: HomepageSettings): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>('/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function uploadMediaFile(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error('Upload failed');
+  }
+  return res.json() as Promise<{ url: string }>;
 }
