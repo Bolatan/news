@@ -81,5 +81,5 @@ export async function fetchFeedStatus(): Promise<{
   byCommunity: Record<string, number>;
   sources: number;
 }> {
-  return apiFetch('/api/feeds/status');
+  return apiFetch('/feeds/status');
 }

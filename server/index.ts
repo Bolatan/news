@@ -8,7 +8,6 @@ import {
   isIkoroduRelated,
   categorizeArticle,
   COMMUNITIES,
-  type Community,
 } from './feeds';
 
 const MONGODB_URI =
