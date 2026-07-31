@@ -123,6 +123,15 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
             </button>
             <div className="hidden md:block w-px h-6 bg-neutral-200" />
             <button
+              onClick={() => onNavigate('/admin')}
+              className={`text-sm font-semibold hover:text-red-600 transition-colors ${
+                isActive('/admin') ? 'text-red-600' : 'text-neutral-700'
+              }`}
+            >
+              Admin Dashboard
+            </button>
+            <div className="hidden md:block w-px h-6 bg-neutral-200" />
+            <button
               onClick={() => onNavigate('/')}
               className="hidden md:block text-sm font-semibold text-neutral-700 hover:text-red-600 transition-colors"
             >

@@ -1,15 +1,21 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import RSSParser from 'rss-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
+import fs from 'fs';
 import {
   FEED_SOURCES,
   detectCommunity,
   isIkoroduRelated,
   categorizeArticle,
   COMMUNITIES,
-  type Community,
 } from './feeds';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const MONGODB_URI =
   process.env.MONGODB_URI ||
@@ -21,6 +27,25 @@ const PORT = 3001;
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static uploaded files
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/api/uploads', express.static(uploadsDir));
+
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+  destination: function (_req, _file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (_req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+const upload = multer({ storage: storage });
 
 let client: MongoClient;
 const rssParser = new RSSParser({
@@ -131,6 +156,9 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
           source: source.name,
           sourceUrl: item.link,
           isAggregated: true,
+          videoUrl: null,
+          videoType: 'none',
+          mediaToDisplay: 'image',
         });
         feedAdded++;
       }
@@ -151,6 +179,154 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
   return { added, skipped, errors };
 }
 
+// Upload Media Endpoint
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+    const fileUrl = `/api/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl });
+  } catch {
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// Seed Initial Users
+async function seedUsersIfNeeded() {
+  const db = await getDb();
+  const usersColl = db.collection('users');
+  const count = await usersColl.countDocuments();
+  if (count === 0) {
+    await usersColl.insertMany([
+      {
+        name: 'Super Admin',
+        email: 'admin@igbenews.com',
+        role: 'Admin',
+        status: 'Active',
+        createdAt: new Date(),
+      },
+      {
+        name: 'Adebola Okunade',
+        email: 'adebola@igbenews.com',
+        role: 'Editor',
+        status: 'Active',
+        createdAt: new Date(),
+      },
+      {
+        name: 'Funmilayo Adebayo',
+        email: 'funmilayo@igbenews.com',
+        role: 'Editor',
+        status: 'Active',
+        createdAt: new Date(),
+      }
+    ]);
+  }
+}
+
+// Configure Pinned / Hero News Settings
+app.get('/api/settings', async (_req, res) => {
+  try {
+    const db = await getDb();
+    const settingsColl = db.collection('settings');
+    let settings = await settingsColl.findOne({ name: 'homepage' });
+    if (!settings) {
+      settings = {
+        name: 'homepage',
+        pinnedHeroArticleId: null, // can be ID or slug of any article (RSS, YouTube/Video, or Editorial)
+        pinnedHeroType: 'none', // 'none' means fallback to default featured algorithm
+        updatedAt: new Date(),
+      };
+      await settingsColl.insertOne(settings);
+    }
+    res.json(settings);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+app.put('/api/settings', async (req, res) => {
+  try {
+    const db = await getDb();
+    const settingsColl = db.collection('settings');
+    const { pinnedHeroArticleId, pinnedHeroType } = req.body;
+    await settingsColl.updateOne(
+      { name: 'homepage' },
+      {
+        $set: {
+          pinnedHeroArticleId,
+          pinnedHeroType,
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// Users CRUD Endpoints
+app.get('/api/users', async (_req, res) => {
+  try {
+    const db = await getDb();
+    const users = await db.collection('users').find({}).toArray();
+    res.json(users);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { name, email, role, status } = req.body;
+    if (!name || !email) {
+      res.status(400).json({ error: 'Name and email are required' });
+      return;
+    }
+    const result = await db.collection('users').insertOne({
+      name,
+      email,
+      role: role || 'Editor',
+      status: status || 'Active',
+      createdAt: new Date(),
+    });
+    res.json({ _id: result.insertedId, name, email, role, status });
+  } catch {
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const { name, email, role, status } = req.body;
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { name, email, role, status, updatedAt: new Date() } }
+    );
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    await db.collection('users').deleteOne({ _id: new ObjectId(id) });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Articles CRUD & Extended endpoints
 app.get('/api/articles', async (req, res) => {
   try {
     const db = await getDb();
@@ -168,12 +344,129 @@ app.get('/api/articles', async (req, res) => {
       .collection('articles')
       .find(filter)
       .sort({ publishedAt: -1 })
-      .limit(Number(limit) || 50)
+      .limit(Number(limit) || 100)
       .toArray();
 
     res.json(articles);
   } catch {
     res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+app.post('/api/articles', async (req, res) => {
+  try {
+    const db = await getDb();
+    const {
+      title,
+      summary,
+      body,
+      category,
+      imageUrl,
+      imageCredit,
+      author,
+      location,
+      community,
+      isFeatured,
+      isBreaking,
+      readTimeMinutes,
+      videoUrl,
+      videoType,
+      mediaToDisplay,
+    } = req.body;
+
+    if (!title || !body || !category) {
+      res.status(400).json({ error: 'Title, body and category are required' });
+      return;
+    }
+
+    const slug = slugify(`${title}-${Date.now()}`);
+    const newArticle = {
+      title,
+      slug,
+      summary: summary || body.slice(0, 300),
+      body,
+      category,
+      imageUrl: imageUrl || null,
+      imageCredit: imageCredit || null,
+      author: author || 'Admin',
+      location: location || null,
+      community: community || null,
+      isFeatured: !!isFeatured,
+      isBreaking: !!isBreaking,
+      readTimeMinutes: Number(readTimeMinutes) || Math.max(2, Math.ceil(body.split(/\s+/).length / 200)),
+      publishedAt: new Date(),
+      isAggregated: false,
+      videoUrl: videoUrl || null,
+      videoType: videoType || 'none', // 'youtube' | 'upload' | 'none'
+      mediaToDisplay: mediaToDisplay || 'image', // 'image' | 'video'
+    };
+
+    const result = await db.collection('articles').insertOne(newArticle);
+    res.json({ _id: result.insertedId, ...newArticle });
+  } catch {
+    res.status(500).json({ error: 'Failed to create article' });
+  }
+});
+
+app.put('/api/articles/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const {
+      title,
+      summary,
+      body,
+      category,
+      imageUrl,
+      imageCredit,
+      author,
+      location,
+      community,
+      isFeatured,
+      isBreaking,
+      readTimeMinutes,
+      videoUrl,
+      videoType,
+      mediaToDisplay,
+    } = req.body;
+
+    const updateFields: Record<string, unknown> = {
+      title,
+      summary,
+      body,
+      category,
+      imageUrl,
+      imageCredit,
+      author,
+      location,
+      community,
+      isFeatured: !!isFeatured,
+      isBreaking: !!isBreaking,
+      readTimeMinutes: Number(readTimeMinutes) || 3,
+      videoUrl,
+      videoType,
+      mediaToDisplay,
+      updatedAt: new Date(),
+    };
+
+    const query = id.length === 24 ? { _id: new ObjectId(id) } : { slug: id };
+
+    await db.collection('articles').updateOne(query, { $set: updateFields });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to update article' });
+  }
+});
+
+app.delete('/api/articles/:id', async (req, res) => {
+  try {
+    const db = await getDb();
+    const { id } = req.params;
+    const query = id.length === 24 ? { _id: new ObjectId(id) } : { slug: id };
+    await db.collection('articles').deleteOne(query);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete article' });
   }
 });
 
@@ -307,6 +600,7 @@ app.post('/api/seed', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await seedUsersIfNeeded();
   console.log(`IGBE News API running on port ${PORT}`);
 });

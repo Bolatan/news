@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchArticles, fetchFeedStatus, type Article } from '@/lib/api';
+import { fetchArticles, fetchFeedStatus, fetchSettings, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
 import BreakingNews from '@/components/BreakingNews';
 import {
@@ -37,14 +37,30 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     (async () => {
       setLoading(true);
 
-      const [featuredArticles, allArticles, breakingArticles, status] = await Promise.all([
+      const [featuredArticles, allArticles, breakingArticles, status, homeSettings] = await Promise.all([
         fetchArticles({ featured: true, limit: 1 }),
         fetchArticles({ limit: 50 }),
         fetchArticles({ breaking: true, limit: 6 }),
         fetchFeedStatus().catch(() => null),
+        fetchSettings().catch(() => null),
       ]);
 
-      const hero = featuredArticles[0] ?? allArticles[0] ?? null;
+      // Determine the hero article based on Pinned Hero settings or standard featured fallback
+      let hero: Article | null = null;
+      if (homeSettings && homeSettings.pinnedHeroType === 'article' && homeSettings.pinnedHeroArticleId) {
+        // Find the pinned article by either ID or slug
+        hero = allArticles.find(
+          (a) =>
+            a._id === homeSettings.pinnedHeroArticleId ||
+            a.id === homeSettings.pinnedHeroArticleId ||
+            a.slug === homeSettings.pinnedHeroArticleId
+        ) ?? null;
+      }
+
+      if (!hero) {
+        hero = featuredArticles[0] ?? allArticles[0] ?? null;
+      }
+
       const remaining = hero
         ? allArticles.filter((a) => a.slug !== hero.slug)
         : allArticles;
