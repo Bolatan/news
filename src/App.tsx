@@ -13,6 +13,7 @@ import ContactPage from '@/pages/ContactPage';
 import AdvertisePage from '@/pages/AdvertisePage';
 import CareersPage from '@/pages/CareersPage';
 import EditorialStandardsPage from '@/pages/EditorialStandardsPage';
+import LoginPage from '@/pages/LoginPage';
 
 export default function App() {
   const [route, setRoute] = useState('/');
@@ -43,6 +44,9 @@ export default function App() {
     }
     if (route === '/editorial-standards') {
       return <EditorialStandardsPage onNavigate={navigate} />;
+    }
+    if (route === '/login') {
+      return <LoginPage onNavigate={navigate} />;
     }
     if (route.startsWith('/article/')) {
       const slug = route.replace('/article/', '');

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchArticles, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
+import RssSidebar from '@/components/RssSidebar';
 import { COMMUNITY_FROM_SLUG } from '@/lib/utils';
 import { MapPin, ChevronRight, RefreshCw } from 'lucide-react';
 
@@ -17,7 +18,7 @@ export default function CommunityPage({ slug, onNavigate }: CommunityPageProps) 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const data = await fetchArticles({ tag: communityName, limit: 50 });
+      const data = await fetchArticles({ tag: communityName, limit: 50 }).catch(() => []);
       setArticles(data);
       setLoading(false);
       window.scrollTo(0, 0);
@@ -50,58 +51,66 @@ export default function CommunityPage({ slug, onNavigate }: CommunityPageProps) 
         <span className="text-neutral-900 font-semibold">{communityName}</span>
       </nav>
 
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white">
-          <MapPin className="w-5 h-5" />
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900">
-          {communityName}
-        </h1>
-      </div>
-      <p className="text-neutral-600 mb-8 pl-13 ml-13">
-        News and stories from the {communityName} community in the Ikorodu division.
-      </p>
-
-      {articles.length === 0 ? (
-        <div className="text-center py-16 bg-neutral-50 rounded-lg">
-          <RefreshCw className="w-8 h-8 text-neutral-300 mx-auto mb-4" />
-          <p className="text-neutral-500 mb-2">
-            No stories tagged for {communityName} yet.
-          </p>
-          <p className="text-sm text-neutral-400 mb-6">
-            Try updating the news feeds — new stories from Nigerian news sources
-            are tagged automatically when they mention this community.
-          </p>
-          <button
-            onClick={() => onNavigate('/')}
-            className="text-red-600 font-semibold hover:underline"
-          >
-            Back to Home
-          </button>
-        </div>
-      ) : (
-        <>
-          {articles[0] && (
-            <div className="mb-8 pb-8 border-b border-neutral-200">
-              <ArticleCard
-                article={articles[0]}
-                onNavigate={onNavigate}
-                variant="hero"
-              />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white">
+              <MapPin className="w-5 h-5" />
             </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.slice(1).map((article) => (
-              <ArticleCard
-                key={article.slug}
-                article={article}
-                onNavigate={onNavigate}
-                variant="standard"
-              />
-            ))}
+            <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900">
+              {communityName}
+            </h1>
           </div>
-        </>
-      )}
+          <p className="text-neutral-600 mb-8 pl-13 ml-13">
+            News and stories from the {communityName} community in the Ikorodu division.
+          </p>
+
+          {articles.length === 0 ? (
+            <div className="text-center py-16 bg-neutral-50 rounded-lg">
+              <RefreshCw className="w-8 h-8 text-neutral-300 mx-auto mb-4" />
+              <p className="text-neutral-500 mb-2">
+                No stories tagged for {communityName} yet.
+              </p>
+              <p className="text-sm text-neutral-400 mb-6">
+                Try updating the news feeds — new stories from Nigerian news sources
+                are tagged automatically when they mention this community.
+              </p>
+              <button
+                onClick={() => onNavigate('/')}
+                className="text-red-600 font-semibold hover:underline"
+              >
+                Back to Home
+              </button>
+            </div>
+          ) : (
+            <>
+              {articles[0] && (
+                <div className="mb-8 pb-8 border-b border-neutral-200">
+                  <ArticleCard
+                    article={articles[0]}
+                    onNavigate={onNavigate}
+                    variant="hero"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {articles.slice(1).map((article) => (
+                  <ArticleCard
+                    key={article.slug}
+                    article={article}
+                    onNavigate={onNavigate}
+                    variant="standard"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="lg:col-span-1">
+          <RssSidebar onNavigate={onNavigate} />
+        </div>
+      </div>
     </div>
   );
 }
