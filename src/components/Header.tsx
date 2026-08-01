@@ -99,8 +99,10 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
             </button>
             <div className="hidden md:block w-px h-6 bg-neutral-200" />
             <button
-              onClick={() => onNavigate('/')}
-              className="hidden md:block text-sm font-semibold text-neutral-700 hover:text-red-600 transition-colors"
+              onClick={() => onNavigate('/login')}
+              className={`hidden md:block text-sm font-semibold hover:text-red-600 transition-colors ${
+                isActive('/login') ? 'text-red-600' : 'text-neutral-700'
+              }`}
             >
               Sign In
             </button>

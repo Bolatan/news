@@ -37,16 +37,14 @@ export default function ArticleCard({
     return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
   };
 
-  const renderMedia = (isHero: boolean) => {
+  const renderMedia = () => {
     if (displayMode === 'video' && hasVideo) {
       if (article.videoType === 'youtube') {
         return (
           <iframe
             src={getYoutubeEmbedUrl(article.videoUrl!)}
             title={article.title}
-            className={`${
-              isHero ? 'absolute inset-0 w-full h-full' : 'w-full h-full aspect-video'
-            } border-0 z-10`}
+            className="absolute inset-0 w-full h-full border-0 z-10"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
@@ -56,9 +54,7 @@ export default function ArticleCard({
           <video
             src={article.videoUrl!}
             controls
-            className={`${
-              isHero ? 'absolute inset-0 w-full h-full object-cover' : 'w-full h-full object-cover aspect-video'
-            } z-10`}
+            className="absolute inset-0 w-full h-full object-cover z-10"
           />
         );
       }
@@ -69,53 +65,66 @@ export default function ArticleCard({
         <img
           src={article.imageUrl}
           alt={article.title}
-          className={
-            isHero
-              ? 'absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700'
-              : 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-500'
-          }
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-all duration-700 ease-out"
         />
       );
     }
 
-    return <div className="w-full h-full bg-neutral-200" />;
+    return (
+      <div className="absolute inset-0 w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-300">
+        <ImageIcon className="w-8 h-8" />
+      </div>
+    );
+  };
+
+  // Standarized media controller component to avoid duplication
+  const renderMediaControls = (isLarge: boolean) => {
+    if (!hasVideo) return null;
+    return (
+      <div
+        className={`absolute z-20 flex items-center gap-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-full shadow-lg transition-all ${
+          isLarge ? 'top-4 right-4 px-2 py-1' : 'top-2 right-2 px-1.5 py-0.5 scale-90 sm:scale-100'
+        }`}
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setDisplayMode('image');
+          }}
+          className={`p-1 rounded-full transition-all text-white ${
+            displayMode === 'image'
+              ? 'bg-red-600 font-bold scale-105'
+              : 'hover:bg-white/15 text-neutral-300'
+          }`}
+          title="Show Image"
+        >
+          <ImageIcon className={isLarge ? 'w-4 h-4' : 'w-3 h-3'} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setDisplayMode('video');
+          }}
+          className={`p-1 rounded-full transition-all text-white ${
+            displayMode === 'video'
+              ? 'bg-red-600 font-bold scale-105'
+              : 'hover:bg-white/15 text-neutral-300'
+          }`}
+          title="Show Video"
+        >
+          <Play className={isLarge ? 'w-4 h-4 fill-current' : 'w-3 h-3 fill-current'} />
+        </button>
+      </div>
+    );
   };
 
   if (variant === 'hero') {
     return (
-      <article className="group cursor-pointer relative overflow-hidden rounded-lg bg-neutral-900 min-h-[420px] sm:min-h-[520px]">
-        {renderMedia(true)}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
+      <article className="group cursor-pointer relative overflow-hidden rounded-lg bg-neutral-950 min-h-[420px] sm:min-h-[520px]">
+        {renderMedia()}
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/45 to-transparent pointer-events-none" />
 
-        {/* Content Controls */}
-        {hasVideo && (
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-bold shadow-sm">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDisplayMode('image');
-              }}
-              className={`p-1 rounded-full transition-colors ${
-                displayMode === 'image' ? 'bg-red-600' : 'hover:bg-white/20'
-              }`}
-              title="Show Image"
-            >
-              <ImageIcon className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDisplayMode('video');
-              }}
-              className={`p-1 rounded-full transition-colors ${
-                displayMode === 'video' ? 'bg-red-600' : 'hover:bg-white/20'
-              }`}
-              title="Show Video"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-            </button>
-          </div>
-        )}
+        {renderMediaControls(true)}
 
         <div className="relative h-full flex flex-col justify-end p-6 sm:p-8" onClick={navigate}>
           <div className="flex items-center gap-2 mb-3">
@@ -186,29 +195,8 @@ export default function ArticleCard({
     return (
       <article className="group cursor-pointer">
         <div className="relative overflow-hidden rounded-lg mb-3 aspect-video bg-neutral-200">
-          {renderMedia(false)}
-          {hasVideo && (
-            <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-white text-[10px] font-bold">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDisplayMode('image');
-                }}
-                className={`p-0.5 rounded-full ${displayMode === 'image' ? 'bg-red-600' : ''}`}
-              >
-                <ImageIcon className="w-3 h-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDisplayMode('video');
-                }}
-                className={`p-0.5 rounded-full ${displayMode === 'video' ? 'bg-red-600' : ''}`}
-              >
-                <Play className="w-3 h-3 fill-current" />
-              </button>
-            </div>
-          )}
+          {renderMedia()}
+          {renderMediaControls(false)}
         </div>
         <div onClick={navigate}>
           <button
@@ -256,9 +244,10 @@ export default function ArticleCard({
     return (
       <article className="group cursor-pointer flex gap-3">
         <div className="relative shrink-0 w-24 h-16 overflow-hidden rounded bg-neutral-200">
-          {renderMedia(false)}
+          {renderMedia()}
+          {renderMediaControls(false)}
         </div>
-        <div className="min-w-0" onClick={navigate}>
+        <div className="min-w-0 flex-1" onClick={navigate}>
           <h3 className="text-neutral-900 text-sm font-semibold leading-snug mb-1 line-clamp-3 group-hover:text-red-600 transition-colors">
             {article.title}
           </h3>
@@ -283,29 +272,8 @@ export default function ArticleCard({
     return (
       <article className="group cursor-pointer flex gap-4 py-4 border-b border-neutral-200 last:border-0">
         <div className="relative shrink-0 w-28 sm:w-40 h-20 sm:h-28 overflow-hidden rounded bg-neutral-200">
-          {renderMedia(false)}
-          {hasVideo && (
-            <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-white text-[10px] font-bold">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDisplayMode('image');
-                }}
-                className={`p-0.5 rounded-full ${displayMode === 'image' ? 'bg-red-600' : ''}`}
-              >
-                <ImageIcon className="w-3 h-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDisplayMode('video');
-                }}
-                className={`p-0.5 rounded-full ${displayMode === 'video' ? 'bg-red-600' : ''}`}
-              >
-                <Play className="w-3 h-3 fill-current" />
-              </button>
-            </div>
-          )}
+          {renderMedia()}
+          {renderMediaControls(false)}
         </div>
         <div className="min-w-0 flex-1" onClick={navigate}>
           <div className="flex items-center gap-2 mb-1">
@@ -375,29 +343,8 @@ export default function ArticleCard({
   return (
     <article className="group cursor-pointer">
       <div className="relative overflow-hidden rounded-lg mb-3 aspect-video bg-neutral-200">
-        {renderMedia(false)}
-        {hasVideo && (
-          <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-white text-[10px] font-bold">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDisplayMode('image');
-              }}
-              className={`p-0.5 rounded-full ${displayMode === 'image' ? 'bg-red-600' : ''}`}
-            >
-              <ImageIcon className="w-3 h-3" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDisplayMode('video');
-              }}
-              className={`p-0.5 rounded-full ${displayMode === 'video' ? 'bg-red-600' : ''}`}
-            >
-              <Play className="w-3 h-3 fill-current" />
-            </button>
-          </div>
-        )}
+        {renderMedia()}
+        {renderMediaControls(false)}
       </div>
       <div onClick={navigate}>
         <div className="flex items-center gap-2 mb-2">

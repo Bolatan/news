@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchArticles, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
+import RssSidebar from '@/components/RssSidebar';
 import { ChevronRight, Hash } from 'lucide-react';
 
 type TagPageProps = {
@@ -56,48 +57,56 @@ export default function TagPage({ tag, onNavigate }: TagPageProps) {
         </span>
       </nav>
 
-      <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-2 border-l-4 border-red-600 pl-4 flex items-center gap-1">
-        <span className="text-red-600">#</span>{decodedTag}
-      </h1>
-      <p className="text-neutral-600 mb-8 pl-4">
-        Discover articles tagged with <strong className="text-neutral-900">#{decodedTag}</strong> from across the Ikorodu division.
-      </p>
-
-      {articles.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-neutral-200 rounded-lg">
-          <p className="text-neutral-500 font-medium">
-            No news items are currently tagged with "#{decodedTag}".
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
+          <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-2 border-l-4 border-red-600 pl-4 flex items-center gap-1">
+            <span className="text-red-600">#</span>{decodedTag}
+          </h1>
+          <p className="text-neutral-600 mb-8 pl-4">
+            Discover articles tagged with <strong className="text-neutral-900">#{decodedTag}</strong> from across the Ikorodu division.
           </p>
-          <button
-            onClick={() => onNavigate('/')}
-            className="mt-4 bg-red-600 text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Back to Home
-          </button>
-        </div>
-      ) : (
-        <>
-          {articles[0] && (
-            <div className="mb-8 pb-8 border-b border-neutral-200">
-              <ArticleCard
-                article={articles[0]}
-                onNavigate={onNavigate}
-                variant="hero"
-              />
+
+          {articles.length === 0 ? (
+            <div className="text-center py-16 border-2 border-dashed border-neutral-200 rounded-lg">
+              <p className="text-neutral-500 font-medium">
+                No news items are currently tagged with "#{decodedTag}".
+              </p>
+              <button
+                onClick={() => onNavigate('/')}
+                className="mt-4 bg-red-600 text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Back to Home
+              </button>
             </div>
+          ) : (
+            <>
+              {articles[0] && (
+                <div className="mb-8 pb-8 border-b border-neutral-200">
+                  <ArticleCard
+                    article={articles[0]}
+                    onNavigate={onNavigate}
+                    variant="hero"
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {articles.slice(1).map((article) => (
+                  <ArticleCard
+                    key={article.slug}
+                    article={article}
+                    onNavigate={onNavigate}
+                    variant="standard"
+                  />
+                ))}
+              </div>
+            </>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {articles.slice(1).map((article) => (
-              <ArticleCard
-                key={article.slug}
-                article={article}
-                onNavigate={onNavigate}
-                variant="standard"
-              />
-            ))}
-          </div>
-        </>
-      )}
+        </div>
+
+        <div className="lg:col-span-1">
+          <RssSidebar onNavigate={onNavigate} />
+        </div>
+      </div>
     </div>
   );
 }

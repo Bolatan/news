@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchArticles, fetchFeedStatus, fetchSettings, type Article } from '@/lib/api';
 import ArticleCard from '@/components/ArticleCard';
 import BreakingNews from '@/components/BreakingNews';
+import RssSidebar from '@/components/RssSidebar';
 import {
   CATEGORIES,
   CATEGORY_SLUGS,
@@ -33,19 +34,17 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   const [byCommunity, setByCommunity] = useState<Record<string, Article[]>>({});
   const [feedStatus, setFeedStatus] = useState<FeedStatus | null>(null);
   const [popularTags, setPopularTags] = useState<{ name: string; count: number }[]>([]);
-  const [rssArticles, setRssArticles] = useState<Article[]>([]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
 
-      const [featuredArticles, allArticles, breakingArticles, status, homeSettings, rssData] = await Promise.all([
-        fetchArticles({ featured: true, limit: 1 }),
-        fetchArticles({ limit: 50 }),
-        fetchArticles({ breaking: true, limit: 6 }),
+      const [featuredArticles, allArticles, breakingArticles, status, homeSettings] = await Promise.all([
+        fetchArticles({ featured: true, limit: 1 }).catch(() => []),
+        fetchArticles({ limit: 50 }).catch(() => []),
+        fetchArticles({ breaking: true, limit: 6 }).catch(() => []),
         fetchFeedStatus().catch(() => null),
         fetchSettings().catch(() => null),
-        fetchArticles({ source: 'aggregated', limit: 15 }).catch(() => []),
       ]);
 
       // Calculate popular tags from fetched articles
@@ -88,7 +87,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       setSecondary(remaining.slice(0, 4));
       setLatest(remaining.slice(4, 10));
       setFeedStatus(status);
-      setRssArticles(rssData);
 
       const catMap: Record<string, Article[]> = {};
       for (const cat of CATEGORIES) {
@@ -287,73 +285,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           </div>
 
           {/* Right Column (RSS Right Sidebar) */}
-          <aside className="lg:col-span-1">
-            <div className="sticky top-20 bg-neutral-50 border border-neutral-200 rounded-lg p-5 shadow-sm space-y-6">
-              <div className="border-b border-neutral-200 pb-3 flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-2">
-                  <Rss className="w-4 h-4 text-red-600" />
-                  Live RSS Feed
-                </h2>
-                <span className="animate-pulse flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                </span>
-              </div>
-
-              {rssArticles.length === 0 ? (
-                <div className="py-6 text-center text-neutral-500 text-xs space-y-2">
-                  <p>No RSS news items found.</p>
-                  <p className="text-[11px] text-neutral-400">
-                    Click{' '}
-                    <button
-                      onClick={() => onNavigate('/admin')}
-                      className="text-red-600 hover:underline font-semibold"
-                    >
-                      "Update Feeds"
-                    </button>{' '}
-                    in the Admin Dashboard to pull live stories from Nigerian news channels.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-1">
-                  {rssArticles.map((art) => (
-                    <article
-                      key={art.slug}
-                      onClick={() => onNavigate(`/article/${art.slug}`)}
-                      className="group cursor-pointer block border-b border-neutral-200 last:border-0 pb-3 last:pb-0"
-                    >
-                      <div className="flex items-center gap-1.5 text-[10px] text-red-600 font-bold uppercase tracking-wide mb-1">
-                        <span>{art.source}</span>
-                      </div>
-                      <h3 className="text-neutral-900 text-xs font-semibold leading-snug group-hover:text-red-600 transition-colors line-clamp-3 mb-1.5">
-                        {art.title}
-                      </h3>
-                      {art.tags && art.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                          {art.tags.slice(0, 3).map(tag => (
-                            <span
-                              key={tag}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onNavigate(`/tag/${encodeURIComponent(tag)}`);
-                              }}
-                              className="text-[9px] bg-neutral-200/60 hover:bg-red-50 hover:text-red-600 text-neutral-600 px-1.5 py-0.5 rounded transition-all font-medium"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="text-[10px] text-neutral-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{new Date(art.publishedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
+          <RssSidebar onNavigate={onNavigate} />
         </div>
 
         <section className="mb-4 bg-neutral-50 rounded-lg p-6">
