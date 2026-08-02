@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient, ObjectId, Db } from 'mongodb';
 import RSSParser from 'rss-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,6 +57,9 @@ async function getDb() {
   if (!client) {
     client = new MongoClient(MONGODB_URI);
     await client.connect();
+    const db = client.db(DB_NAME);
+    await seedUsersIfNeeded(db);
+    return db;
   }
   return client.db(DB_NAME);
 }
@@ -202,9 +205,8 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 });
 
 // Seed Initial Users
-async function seedUsersIfNeeded() {
+async function seedUsersIfNeeded(db: Db) {
   try {
-    const db = await getDb();
     const usersColl = db.collection('users');
     const count = await usersColl.countDocuments();
     if (count === 0) {
@@ -645,12 +647,16 @@ app.post('/api/seed', async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  try {
-    await seedUsersIfNeeded();
-    console.log(`IGBE News API running on port ${PORT}`);
-  } catch (err) {
-    console.error(`Error during startup initialization:`, err);
-    console.log(`IGBE News API running on port ${PORT} (DB offline/failed to connect)`);
-  }
-});
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, async () => {
+    try {
+      await getDb();
+      console.log(`IGBE News API running on port ${PORT}`);
+    } catch (err) {
+      console.error(`Error during startup initialization:`, err);
+      console.log(`IGBE News API running on port ${PORT} (DB offline/failed to connect)`);
+    }
+  });
+}
+
+export default app;
