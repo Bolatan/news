@@ -29,10 +29,30 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static uploaded files
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+let uploadsDir = path.join(__dirname, 'uploads');
+
+// In Vercel serverless environments, the local filesystem is read-only.
+// We fall back to the writable /tmp/uploads directory to prevent startup/import failures.
+if (process.env.VERCEL) {
+  uploadsDir = path.join('/tmp', 'uploads');
 }
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err) {
+  console.error(`Failed to create uploads directory "${uploadsDir}". Falling back to /tmp/uploads...`, err);
+  uploadsDir = path.join('/tmp', 'uploads');
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch (fallbackErr) {
+    console.error('Failed to create fallback uploads directory in /tmp/uploads:', fallbackErr);
+  }
+}
+
 app.use('/api/uploads', express.static(uploadsDir));
 
 // Multer Storage Configuration
