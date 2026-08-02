@@ -203,33 +203,37 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 // Seed Initial Users
 async function seedUsersIfNeeded() {
-  const db = await getDb();
-  const usersColl = db.collection('users');
-  const count = await usersColl.countDocuments();
-  if (count === 0) {
-    await usersColl.insertMany([
-      {
-        name: 'Super Admin',
-        email: 'admin@igbenews.com',
-        role: 'Admin',
-        status: 'Active',
-        createdAt: new Date(),
-      },
-      {
-        name: 'Adebola Okunade',
-        email: 'adebola@igbenews.com',
-        role: 'Editor',
-        status: 'Active',
-        createdAt: new Date(),
-      },
-      {
-        name: 'Funmilayo Adebayo',
-        email: 'funmilayo@igbenews.com',
-        role: 'Editor',
-        status: 'Active',
-        createdAt: new Date(),
-      }
-    ]);
+  try {
+    const db = await getDb();
+    const usersColl = db.collection('users');
+    const count = await usersColl.countDocuments();
+    if (count === 0) {
+      await usersColl.insertMany([
+        {
+          name: 'Super Admin',
+          email: 'admin@igbenews.com',
+          role: 'Admin',
+          status: 'Active',
+          createdAt: new Date(),
+        },
+        {
+          name: 'Adebola Okunade',
+          email: 'adebola@igbenews.com',
+          role: 'Editor',
+          status: 'Active',
+          createdAt: new Date(),
+        },
+        {
+          name: 'Funmilayo Adebayo',
+          email: 'funmilayo@igbenews.com',
+          role: 'Editor',
+          status: 'Active',
+          createdAt: new Date(),
+        }
+      ]);
+    }
+  } catch (err) {
+    console.error('Failed to seed users on startup. Database might be offline.', err);
   }
 }
 
@@ -642,6 +646,11 @@ app.post('/api/seed', async (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  await seedUsersIfNeeded();
-  console.log(`IGBE News API running on port ${PORT}`);
+  try {
+    await seedUsersIfNeeded();
+    console.log(`IGBE News API running on port ${PORT}`);
+  } catch (err) {
+    console.error(`Error during startup initialization:`, err);
+    console.log(`IGBE News API running on port ${PORT} (DB offline/failed to connect)`);
+  }
 });

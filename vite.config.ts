@@ -11,6 +11,7 @@ function startBackend() {
   backendProcess = spawn('npx', ['tsx', 'watch', 'server/index.ts'], {
     stdio: 'inherit',
     detached: true,
+    shell: true,
   });
 
   backendProcess.on('close', (code: number | null) => {
