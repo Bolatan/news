@@ -57,6 +57,8 @@ async function getDb() {
   if (!client) {
     client = new MongoClient(MONGODB_URI);
     await client.connect();
+    // Seed users on connection in serverless environments
+    await seedUsersIfNeeded();
   }
   return client.db(DB_NAME);
 }
@@ -641,7 +643,15 @@ app.post('/api/seed', async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  await seedUsersIfNeeded();
-  console.log(`IGBE News API running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, async () => {
+    try {
+      await getDb();
+      console.log(`IGBE News API running on port ${PORT}`);
+    } catch (err) {
+      console.error('Error starting server or connecting to DB:', err);
+    }
+  });
+}
+
+export default app;
