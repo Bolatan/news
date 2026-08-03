@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { mockArticles } from './mockData';
+import { mockArticles } from './mockData.js';
 
 const MONGODB_URI =
   'mongodb+srv://bolatan_db_user:28A0Oh00Ib4c3qrU@cluster0.ub5jkhi.mongodb.net/?appName=Cluster0';

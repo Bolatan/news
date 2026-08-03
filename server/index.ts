@@ -12,8 +12,8 @@ import {
   isIkoroduRelated,
   categorizeArticle,
   COMMUNITIES,
-} from './feeds';
-import { mockArticles, mockUsers, mockSettings } from './mockData';
+} from './feeds.js';
+import { mockArticles, mockUsers, mockSettings } from './mockData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
