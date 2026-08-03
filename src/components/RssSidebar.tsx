@@ -1,130 +1,90 @@
-import { useEffect, useState } from 'react';
-import { fetchArticles, fetchFeedStatus, type Article } from '@/lib/api';
-import { Clock, Rss } from 'lucide-react';
+import { Sprout, ExternalLink, Globe, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 type RssSidebarProps = {
-  onNavigate: (path: string) => void;
+  onNavigate?: (path: string) => void;
 };
 
-type FeedStatus = {
-  total: number;
-  aggregated: number;
-  editorial: number;
-  byCommunity: Record<string, number>;
-  sources: number;
-};
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function RssSidebar({ onNavigate }: RssSidebarProps) {
-  const [loading, setLoading] = useState(true);
-  const [rssArticles, setRssArticles] = useState<Article[]>([]);
-  const [feedStatus, setFeedStatus] = useState<FeedStatus | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [rssData, status] = await Promise.all([
-          fetchArticles({ source: 'aggregated', limit: 15 }).catch(() => []),
-          fetchFeedStatus().catch(() => null),
-        ]);
-        setRssArticles(rssData);
-        setFeedStatus(status);
-      } catch (err) {
-        console.error('Failed to load RSS Sidebar data', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  if (loading) {
-    return (
-      <aside className="space-y-6">
-        <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-5 shadow-sm animate-pulse space-y-4">
-          <div className="h-6 bg-neutral-200 rounded w-1/2" />
-          <div className="h-4 bg-neutral-200 rounded w-3/4" />
-          <div className="space-y-3 pt-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-3 bg-neutral-200 rounded w-1/4" />
-                <div className="h-4 bg-neutral-200 rounded w-full" />
-                <div className="h-3 bg-neutral-200 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
-    );
-  }
-
   return (
     <aside className="space-y-6">
-      <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-5 shadow-sm space-y-6">
-        <div className="border-b border-neutral-200 pb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-2">
-            <Rss className="w-4 h-4 text-red-600 animate-pulse" />
-            Live RSS Feed
-          </h2>
-          <span className="flex h-2.5 w-2.5 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+      <div className="bg-gradient-to-br from-emerald-800 via-emerald-900 to-green-950 text-white rounded-xl p-6 shadow-md border border-emerald-700/50 space-y-5 relative overflow-hidden">
+        {/* Abstract Background Shapes for Design Depth */}
+        <div className="absolute -right-16 -bottom-16 w-36 h-36 rounded-full bg-emerald-600/10 pointer-events-none" />
+        <div className="absolute -left-12 -top-12 w-28 h-28 rounded-full bg-green-500/10 pointer-events-none" />
+
+        {/* Ad Badge */}
+        <div className="flex items-center justify-between border-b border-emerald-700/40 pb-3">
+          <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-300">
+            Sponsored Partner
+          </span>
+          <span className="text-[9px] bg-emerald-700/60 text-emerald-100 px-2 py-0.5 rounded-full border border-emerald-600/30">
+            Ad
           </span>
         </div>
 
-        {feedStatus && (
-          <div className="text-xs text-neutral-600 bg-white border border-neutral-200/60 rounded-md p-3 space-y-1">
-            <p className="font-semibold text-neutral-700">Aggregation Status</p>
-            <p>{feedStatus.aggregated} stories aggregated from {feedStatus.sources} feeds.</p>
+        {/* Brand Section */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm border border-emerald-500/30">
+              <Sprout className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold tracking-tight text-white">
+              FarmersHub
+            </h2>
           </div>
-        )}
+          <p className="text-xs font-semibold text-emerald-300 leading-snug">
+            Bridge the Gap Between Farmers & Global Markets
+          </p>
+        </div>
 
-        {rssArticles.length === 0 ? null : (
-          <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-1 scrollbar-thin">
-            {rssArticles.map((art) => (
-              <article
-                key={art.slug}
-                onClick={() => onNavigate(`/article/${art.slug}`)}
-                className="group cursor-pointer block border-b border-neutral-200/70 last:border-0 pb-3.5 last:pb-0"
-              >
-                <div className="flex items-center gap-1.5 text-[10px] text-red-600 font-bold uppercase tracking-wide mb-1">
-                  <span>{art.source}</span>
-                </div>
-                <h3 className="text-neutral-900 text-xs font-semibold leading-snug group-hover:text-red-600 transition-colors line-clamp-3 mb-1.5">
-                  {art.title}
-                </h3>
-                {art.tags && art.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-1.5">
-                    {art.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onNavigate(`/tag/${encodeURIComponent(tag)}`);
-                        }}
-                        className="text-[9px] bg-neutral-200/60 hover:bg-red-50 hover:text-red-600 text-neutral-600 px-1.5 py-0.5 rounded transition-all font-medium"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="text-[10px] text-neutral-400 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  <span>
-                    {new Date(art.publishedAt).toLocaleTimeString('en-GB', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}{' '}
-                    · {new Date(art.publishedAt).toLocaleDateString('en-GB', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+        {/* Description */}
+        <p className="text-xs text-neutral-100/95 leading-relaxed">
+          Empowering Nigerian farmers to reach international buyers while providing global access to premium African agricultural products. Join Africa's fastest-growing agritech platform today.
+        </p>
+
+        {/* Feature Highlights */}
+        <div className="space-y-3 pt-1">
+          <h3 className="text-[10px] font-bold tracking-wider uppercase text-emerald-300">
+            What They Offer:
+          </h3>
+          <ul className="space-y-2.5 text-xs text-neutral-200">
+            <li className="flex items-start gap-2.5">
+              <ShoppingBag className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-white">Inputs & Supplies</span>
+                <p className="text-[11px] text-neutral-300">Seeds, fertilizers, pesticides & modern machinery.</p>
+              </div>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Globe className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-white">Fresh Produce & Grains</span>
+                <p className="text-[11px] text-neutral-300">Premium quality crops, tubers & livestock direct from farms.</p>
+              </div>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-white">Agri-Services & Land</span>
+                <p className="text-[11px] text-neutral-300">Agronomy, professional logistics & arable farmland listings.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        {/* Call to Action Button */}
+        <div className="pt-2">
+          <a
+            href="https://www.farmershub.com.ng/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-900 font-bold text-xs py-3 px-4 rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all transform hover:-translate-y-0.5 hover:shadow"
+          >
+            <span>Visit FarmersHub Marketplace</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
     </aside>
   );
