@@ -5,9 +5,11 @@ import { CATEGORIES, CATEGORY_SLUGS, COMMUNITIES, COMMUNITY_SLUGS } from '@/lib/
 type HeaderProps = {
   onNavigate: (path: string) => void;
   currentPath: string;
+  isLoggedIn?: boolean;
+  onLogout?: () => void;
 };
 
-export default function Header({ onNavigate, currentPath }: HeaderProps) {
+export default function Header({ onNavigate, currentPath, isLoggedIn, onLogout }: HeaderProps) {
   const [now, setNow] = useState(new Date());
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -89,23 +91,39 @@ export default function Header({ onNavigate, currentPath }: HeaderProps) {
               <Search className="w-5 h-5" />
             </button>
             <div className="hidden md:block w-px h-6 bg-neutral-200" />
-            <button
-              onClick={() => onNavigate('/admin')}
-              className={`text-sm font-semibold hover:text-red-600 transition-colors ${
-                isActive('/admin') ? 'text-red-600' : 'text-neutral-700'
-              }`}
-            >
-              Admin Dashboard
-            </button>
-            <div className="hidden md:block w-px h-6 bg-neutral-200" />
-            <button
-              onClick={() => onNavigate('/login')}
-              className={`hidden md:block text-sm font-semibold hover:text-red-600 transition-colors ${
-                isActive('/login') ? 'text-red-600' : 'text-neutral-700'
-              }`}
-            >
-              Sign In
-            </button>
+            {isLoggedIn && (
+              <>
+                <button
+                  onClick={() => onNavigate('/admin')}
+                  className={`text-sm font-semibold hover:text-red-600 transition-colors ${
+                    isActive('/admin') ? 'text-red-600' : 'text-neutral-700'
+                  }`}
+                >
+                  Admin Dashboard
+                </button>
+                <div className="hidden md:block w-px h-6 bg-neutral-200" />
+              </>
+            )}
+            {isLoggedIn ? (
+              <button
+                onClick={() => {
+                  if (onLogout) onLogout();
+                  onNavigate('/');
+                }}
+                className="hidden md:block text-sm font-semibold hover:text-red-600 transition-colors text-neutral-700"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('/login')}
+                className={`hidden md:block text-sm font-semibold hover:text-red-600 transition-colors ${
+                  isActive('/login') ? 'text-red-600' : 'text-neutral-700'
+                }`}
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
 

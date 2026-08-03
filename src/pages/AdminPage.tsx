@@ -29,7 +29,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 
-export default function AdminPage() {
+export default function AdminPage({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState<'articles' | 'users' | 'settings'>('articles');
 
   // Articles state
@@ -393,6 +393,13 @@ export default function AdminPage() {
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Updating Feeds...' : 'Update Feeds'}
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
+          >
+            Sign Out
           </button>
 
           <div className="flex bg-neutral-100 p-1 rounded-lg">

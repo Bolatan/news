@@ -3,9 +3,10 @@ import { Mail, Lock, ArrowLeft, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 type LoginPageProps = {
   onNavigate: (path: string) => void;
+  onLoginSuccess?: () => void;
 };
 
-export default function LoginPage({ onNavigate }: LoginPageProps) {
+export default function LoginPage({ onNavigate, onLoginSuccess }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +41,9 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
       setLoading(false);
       // Navigate to admin if it's admin credentials, else home page
       if (email.toLowerCase() === 'admin@igbenews.com') {
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
         onNavigate('/admin');
       } else {
         onNavigate('/');
