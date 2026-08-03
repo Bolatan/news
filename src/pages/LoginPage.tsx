@@ -33,6 +33,11 @@ export default function LoginPage({ onNavigate }: LoginPageProps) {
       return;
     }
 
+    if (email.toLowerCase() === 'admin@igbenews.com' && password !== 'Ogbogbo123$') {
+      setError('Incorrect password for admin@igbenews.com.');
+      return;
+    }
+
     setLoading(true);
 
     // Simulate login process
