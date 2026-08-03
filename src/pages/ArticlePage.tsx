@@ -27,6 +27,78 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
   const [article, setArticle] = useState<Article | null>(null);
   const [related, setRelated] = useState<Article[]>([]);
   const [error, setError] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarked_articles') || '[]');
+      setIsBookmarked(bookmarks.includes(slug));
+    } catch {
+      setIsBookmarked(false);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
+  const handleBookmark = () => {
+    try {
+      const bookmarks = JSON.parse(localStorage.getItem('bookmarked_articles') || '[]');
+      let updated: string[];
+      if (bookmarks.includes(slug)) {
+        updated = bookmarks.filter((s: string) => s !== slug);
+        setIsBookmarked(false);
+        showToast('Article removed from bookmarks');
+      } else {
+        updated = [...bookmarks, slug];
+        setIsBookmarked(true);
+        showToast('Article saved to bookmarks');
+      }
+      localStorage.setItem('bookmarked_articles', JSON.stringify(updated));
+    } catch {
+      showToast('Failed to update bookmarks');
+    }
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/article/${slug}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article?.title || 'IGBE News',
+          text: article?.summary || '',
+          url,
+        });
+        showToast('Shared successfully!');
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link copied to clipboard!');
+          } catch {
+            showToast('Failed to share or copy link');
+          }
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!');
+      } catch {
+        showToast('Failed to copy link');
+      }
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -162,12 +234,18 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleBookmark}
             aria-label="Bookmark"
-            className="w-9 h-9 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-red-600 hover:text-red-600 transition-colors"
+            className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors ${
+              isBookmarked
+                ? 'border-red-600 bg-red-50 text-red-600'
+                : 'border-neutral-300 text-neutral-600 hover:border-red-600 hover:text-red-600'
+            }`}
           >
-            <Bookmark className="w-4 h-4" />
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </button>
           <button
+            onClick={handleShare}
             aria-label="Share"
             className="w-9 h-9 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-red-600 hover:text-red-600 transition-colors"
           >
@@ -260,6 +338,12 @@ export default function ArticlePage({ slug, onNavigate }: ArticlePageProps) {
             ))}
           </div>
         </section>
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-neutral-900 text-white text-sm font-semibold py-2.5 px-4 rounded-lg shadow-lg transition-all duration-300 animate-fade-in flex items-center gap-2">
+          <span>{toastMessage}</span>
+        </div>
       )}
     </article>
   );
