@@ -78,21 +78,7 @@ export default function RssSidebar({ onNavigate }: RssSidebarProps) {
           </div>
         )}
 
-        {rssArticles.length === 0 ? (
-          <div className="py-6 text-center text-neutral-500 text-xs space-y-2">
-            <p>No RSS news items found.</p>
-            <p className="text-[11px] text-neutral-400">
-              Click{' '}
-              <button
-                onClick={() => onNavigate('/admin')}
-                className="text-red-600 hover:underline font-semibold"
-              >
-                "Update Feeds"
-              </button>{' '}
-              in the Admin Dashboard to pull live stories.
-            </p>
-          </div>
-        ) : (
+        {rssArticles.length === 0 ? null : (
           <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-1 scrollbar-thin">
             {rssArticles.map((art) => (
               <article
