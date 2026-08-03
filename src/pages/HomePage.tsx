@@ -10,7 +10,7 @@ import {
   COMMUNITY_SLUGS,
   formatFullDate,
 } from '@/lib/utils';
-import { Clock, ChevronRight, MapPin, RefreshCw, Rss } from 'lucide-react';
+import { Clock, ChevronRight, MapPin, Rss } from 'lucide-react';
 
 type HomePageProps = {
   onNavigate: (path: string) => void;
@@ -287,35 +287,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           {/* Right Column (RSS Right Sidebar) */}
           <RssSidebar onNavigate={onNavigate} />
         </div>
-
-        <section className="mb-4 bg-neutral-50 rounded-lg p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white shrink-0">
-              <RefreshCw className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900 mb-1">
-                Live News Aggregation
-              </h2>
-              <p className="text-sm text-neutral-600 leading-relaxed mb-3">
-                IGBE News automatically pulls stories from {feedStatus?.sources ?? 'multiple'}{' '}
-                Nigerian news sources via RSS feeds. Stories mentioning Ikorodu or its
-                communities are tagged and organized automatically. Use the{' '}
-                <button
-                  onClick={() => onNavigate('/admin')}
-                  className="text-red-600 hover:underline font-semibold"
-                >
-                  "Update Feeds"
-                </button>{' '}
-                button in the Admin Dashboard to fetch the latest stories.
-              </p>
-              <p className="text-xs text-neutral-500">
-                Sources include Punch, Vanguard, The Guardian, Premium Times, Channels TV,
-                Daily Trust, and more.
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   );
