@@ -54,7 +54,54 @@ try {
   }
 }
 
-app.use('/api/uploads', express.static(uploadsDir));
+// Dynamic File-Serving Endpoint with database & in-memory backup fallbacks
+app.get('/api/uploads/:filename', async (req, res) => {
+  const { filename } = req.params;
+  const safeFilename = path.basename(filename);
+  const localFilePath = path.join(uploadsDir, safeFilename);
+
+  // 1. Try to serve from local directory first (perfect for local development or same-session uploads)
+  if (fs.existsSync(localFilePath)) {
+    res.sendFile(localFilePath);
+    return;
+  }
+
+  // 2. Fall back to MongoDB 'uploads' collection
+  try {
+    const db = await getDb();
+    if (db && !isInMemoryFallback) {
+      const uploadDoc = await db.collection('uploads').findOne({ filename: safeFilename });
+      if (uploadDoc && uploadDoc.data) {
+        const fileBuffer = Buffer.from(uploadDoc.data, 'base64');
+        const contentType = uploadDoc.contentType || 'application/octet-stream';
+
+        // Attempt to cache locally in the uploadsDir for subsequent fast local serving
+        try {
+          fs.writeFileSync(localFilePath, fileBuffer);
+        } catch (writeErr) {
+          console.warn('Could not write database file locally to serverless cache directory:', writeErr);
+        }
+
+        res.set('Content-Type', contentType);
+        res.send(fileBuffer);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to query database for uploaded file "${filename}":`, err);
+  }
+
+  // 3. Fall back to ephemeral in-memory cache
+  const cachedFile = uploadsInMemory.find(u => u.filename === safeFilename);
+  if (cachedFile) {
+    const fileBuffer = Buffer.from(cachedFile.data, 'base64');
+    res.set('Content-Type', cachedFile.contentType);
+    res.send(fileBuffer);
+    return;
+  }
+
+  res.status(404).send('File not found');
+});
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -77,6 +124,14 @@ const rssParser = new RSSParser({
 // Fallback in-memory databases state
 let isInMemoryFallback = false;
 
+// Memory upload cache
+interface UploadedFileCache {
+  filename: string;
+  contentType: string;
+  data: string; // Base64 representation of binary content
+}
+const uploadsInMemory: UploadedFileCache[] = [];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let articlesInMemory: any[] = mockArticles.map((art, index) => {
   const finalTags = [...new Set([
@@ -98,22 +153,23 @@ let usersInMemory: any[] = mockUsers.map(u => ({ ...u }));
 let settingsInMemory: any = { ...mockSettings };
 
 async function getDb(): Promise<Db | null> {
-  if (isInMemoryFallback) {
-    return null;
-  }
   try {
     if (!client) {
-      client = new MongoClient(MONGODB_URI, {
-        connectTimeoutMS: 4000,
-        socketTimeoutMS: 4000,
-        serverSelectionTimeoutMS: 4000,
+      const tempClient = new MongoClient(MONGODB_URI, {
+        connectTimeoutMS: 8000,
+        socketTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 8000,
       });
-      await client.connect();
+      await tempClient.connect();
+      client = tempClient;
       const db = client.db(DB_NAME);
       await seedUsersIfNeeded(db);
+      isInMemoryFallback = false;
       return db;
     }
-    return client.db(DB_NAME);
+    const db = client.db(DB_NAME);
+    isInMemoryFallback = false;
+    return db;
   } catch (err) {
     console.error('Failed to connect to MongoDB, falling back to in-memory database:', err);
     isInMemoryFallback = true;
@@ -302,15 +358,44 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
 }
 
 // Upload Media Endpoint
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
       return;
     }
-    const fileUrl = `/api/uploads/${req.file.filename}`;
+
+    const { filename, mimetype, path: filePath } = req.file;
+    const fileContent = fs.readFileSync(filePath);
+    const base64Data = fileContent.toString('base64');
+
+    // Store in memory fallback
+    uploadsInMemory.push({
+      filename,
+      contentType: mimetype,
+      data: base64Data,
+    });
+
+    // Store in MongoDB uploads collection if available
+    const db = await getDb();
+    if (db && !isInMemoryFallback) {
+      try {
+        const uploadsColl = db.collection('uploads');
+        await uploadsColl.updateOne(
+          { filename },
+          { $set: { filename, contentType: mimetype, data: base64Data, createdAt: new Date() } },
+          { upsert: true }
+        );
+        await uploadsColl.createIndex({ filename: 1 });
+      } catch (err) {
+        console.error('Failed to store upload in MongoDB:', err);
+      }
+    }
+
+    const fileUrl = `/api/uploads/${filename}`;
     res.json({ url: fileUrl });
-  } catch {
+  } catch (err) {
+    console.error('Failed to upload file:', err);
     res.status(500).json({ error: 'Failed to upload file' });
   }
 });
