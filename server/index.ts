@@ -77,7 +77,8 @@ const rssParser = new RSSParser({
 // Fallback in-memory databases state
 let isInMemoryFallback = false;
 
-let articlesInMemory = mockArticles.map((art, index) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let articlesInMemory: any[] = mockArticles.map((art, index) => {
   const finalTags = [...new Set([
     art.category,
     ...(art.community ? [art.community] : []),
@@ -91,8 +92,10 @@ let articlesInMemory = mockArticles.map((art, index) => {
   };
 });
 
-let usersInMemory = mockUsers.map(u => ({ ...u }));
-let settingsInMemory = { ...mockSettings };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let usersInMemory: any[] = mockUsers.map(u => ({ ...u }));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let settingsInMemory: any = { ...mockSettings };
 
 async function getDb(): Promise<Db | null> {
   if (isInMemoryFallback) {
@@ -338,15 +341,17 @@ app.get('/api/settings', async (_req, res) => {
     if (db && !isInMemoryFallback) {
       try {
         const settingsColl = db.collection('settings');
-        let settings = await settingsColl.findOne({ name: 'homepage' });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let settings: any = await settingsColl.findOne({ name: 'homepage' });
         if (!settings) {
-          settings = {
+          const defaultSettings = {
             name: 'homepage',
             pinnedHeroArticleId: null, // can be ID or slug of any article (RSS, YouTube/Video, or Editorial)
             pinnedHeroType: 'none', // 'none' means fallback to default featured algorithm
             updatedAt: new Date(),
           };
-          await settingsColl.insertOne(settings);
+          await settingsColl.insertOne(defaultSettings);
+          settings = defaultSettings;
         }
         res.json(settings);
         return;
