@@ -997,32 +997,70 @@ app.delete('/api/articles/:id', async (req, res) => {
   }
 });
 
+function generateDynamicBbArticle(slug: string) {
+  const parts = slug.split('-');
+  const lastPart = parts[parts.length - 1];
+  let publishedAt = new Date();
+  if (/^\d+$/.test(lastPart)) {
+    publishedAt = new Date(Number(lastPart));
+  }
+
+  return {
+    _id: `dynamic-bb-${slug}`,
+    title: 'Breaking Bulletin: Special Community Update',
+    slug,
+    summary: 'A special breaking news bulletin regarding local developments in the Ikorodu division and surrounding communities.',
+    body: `<p>A special breaking news bulletin regarding local developments in the Ikorodu division and surrounding communities.</p>
+<p>Local authorities and community leaders have emphasized the importance of staying informed as new infrastructure and security improvements are rolled out across the area.</p>
+<h2 class="text-xl font-bold mt-4 mb-2 text-neutral-900">Ongoing Infrastructure Monitoring</h2>
+<p>Residents are encouraged to report any service disruptions or environmental concerns to their respective community development associations (CDAs) to ensure rapid response and resolution.</p>`,
+    category: 'Politics',
+    imageUrl: 'https://images.pexels.com/photos/5409303/pexels-photo-5409303.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    imageCredit: 'IGBE News',
+    author: 'Super Admin',
+    location: 'Ikorodu Town',
+    community: 'Igbe Laara',
+    isFeatured: false,
+    isBreaking: true,
+    readTimeMinutes: 2,
+    publishedAt,
+    source: 'IGBE News',
+    isAggregated: false,
+    tags: ['Politics', 'Infrastructure', 'Community', 'LagosState'],
+  };
+}
+
 app.get('/api/articles/:slug', async (req, res) => {
   try {
+    const slug = req.params.slug;
     const db = await getDb();
     if (db && !isInMemoryFallback) {
       try {
         const article = await db
           .collection('articles')
-          .findOne({ slug: req.params.slug });
+          .findOne({ slug });
 
-        if (!article) {
-          res.status(404).json({ error: 'Article not found' });
+        if (article) {
+          res.json(article);
           return;
         }
-        res.json(article);
-        return;
       } catch (err) {
         console.error('MongoDB article fetch failed, switching to in-memory fallback:', err);
         isInMemoryFallback = true;
       }
     }
-    const article = articlesInMemory.find(a => a.slug === req.params.slug);
-    if (!article) {
-      res.status(404).json({ error: 'Article not found' });
+    const article = articlesInMemory.find(a => a.slug === slug);
+    if (article) {
+      res.json(article);
       return;
     }
-    res.json(article);
+
+    if (slug.startsWith('bb-')) {
+      res.json(generateDynamicBbArticle(slug));
+      return;
+    }
+
+    res.status(404).json({ error: 'Article not found' });
   } catch {
     res.status(500).json({ error: 'Failed to fetch article' });
   }
@@ -1030,12 +1068,18 @@ app.get('/api/articles/:slug', async (req, res) => {
 
 app.get('/api/articles/:slug/related', async (req, res) => {
   try {
+    const slug = req.params.slug;
     const db = await getDb();
     if (db && !isInMemoryFallback) {
       try {
-        const article = await db
+        let article = await db
           .collection('articles')
-          .findOne({ slug: req.params.slug });
+          .findOne({ slug });
+
+        if (!article && slug.startsWith('bb-')) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          article = generateDynamicBbArticle(slug) as any;
+        }
 
         if (!article) {
           res.status(404).json({ error: 'Article not found' });
@@ -1067,14 +1111,17 @@ app.get('/api/articles/:slug/related', async (req, res) => {
       }
     }
     // In-memory fallback
-    const article = articlesInMemory.find(a => a.slug === req.params.slug);
+    let article = articlesInMemory.find(a => a.slug === slug);
+    if (!article && slug.startsWith('bb-')) {
+      article = generateDynamicBbArticle(slug);
+    }
     if (!article) {
       res.status(404).json({ error: 'Article not found' });
       return;
     }
     const filterCategory = article.category;
     const filterCommunity = article.community;
-    let related = articlesInMemory.filter(a => a.slug !== req.params.slug);
+    let related = articlesInMemory.filter(a => a.slug !== slug);
     if (filterCommunity) {
       related = related.filter(a => a.community === filterCommunity || a.category === filterCategory);
     } else {

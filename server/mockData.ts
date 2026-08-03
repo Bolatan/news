@@ -521,4 +521,26 @@ export const mockArticles = [
     isAggregated: false,
     tags: ['HealthScreening', 'Youths', 'Prevention', 'Igboke'],
   },
+  {
+    title: 'Breaking Bulletin: Special Community Update',
+    slug: 'bb-1785734757170',
+    summary: 'A special breaking news bulletin regarding local developments in the Ikorodu division and surrounding communities.',
+    body: `<p>A special breaking news bulletin regarding local developments in the Ikorodu division and surrounding communities.</p>
+<p>Local authorities and community leaders have emphasized the importance of staying informed as new infrastructure and security improvements are rolled out across the area.</p>
+<h2 class="text-xl font-bold mt-4 mb-2 text-neutral-900">Ongoing Infrastructure Monitoring</h2>
+<p>Residents are encouraged to report any service disruptions or environmental concerns to their respective community development associations (CDAs) to ensure rapid response and resolution.</p>`,
+    category: 'Politics',
+    imageUrl: 'https://images.pexels.com/photos/5409303/pexels-photo-5409303.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    imageCredit: 'IGBE News',
+    author: 'Super Admin',
+    location: 'Ikorodu Town',
+    community: 'Igbe Laara',
+    isFeatured: false,
+    isBreaking: true,
+    readTimeMinutes: 2,
+    publishedAt: new Date(1785734757170),
+    source: 'IGBE News',
+    isAggregated: false,
+    tags: ['Politics', 'Infrastructure', 'Community', 'LagosState'],
+  },
 ];
