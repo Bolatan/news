@@ -152,6 +152,39 @@ let usersInMemory: any[] = mockUsers.map(u => ({ ...u }));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let settingsInMemory: any = { ...mockSettings };
 
+async function syncInMemoryFromDb(db: Db) {
+  try {
+    // Sync articles
+    const dbArticles = await db.collection('articles').find({}).sort({ publishedAt: -1 }).toArray();
+    if (dbArticles.length > 0) {
+      articlesInMemory = dbArticles.map(a => ({
+        ...a,
+        _id: a._id.toString(),
+      }));
+    }
+
+    // Sync users
+    const dbUsers = await db.collection('users').find({}).toArray();
+    if (dbUsers.length > 0) {
+      usersInMemory = dbUsers.map(u => ({
+        ...u,
+        _id: u._id.toString(),
+      }));
+    }
+
+    // Sync settings
+    const dbSettings = await db.collection('settings').findOne({ name: 'homepage' });
+    if (dbSettings) {
+      settingsInMemory = {
+        ...dbSettings,
+        _id: dbSettings._id.toString(),
+      };
+    }
+  } catch (err) {
+    console.error('Failed to sync in-memory cache from database:', err);
+  }
+}
+
 async function getDb(): Promise<Db | null> {
   try {
     if (!client) {
@@ -164,6 +197,7 @@ async function getDb(): Promise<Db | null> {
       client = tempClient;
       const db = client.db(DB_NAME);
       await seedUsersIfNeeded(db);
+      await syncInMemoryFromDb(db);
       isInMemoryFallback = false;
       return db;
     }
@@ -269,7 +303,7 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
               ...itemCategories.map(c => typeof c === 'string' ? c : (c as { _?: string })?._ || '').filter(Boolean)
             ])].map(t => t.trim()).filter(t => t.length > 0 && t.length < 50);
 
-            await collection.insertOne({
+            const newRssArticle = {
               title,
               slug,
               summary,
@@ -291,7 +325,13 @@ async function refreshFeeds(): Promise<{ added: number; skipped: number; errors:
               videoType: 'none',
               mediaToDisplay: 'image',
               tags: extractedTags,
-            });
+            };
+
+            const result = await collection.insertOne(newRssArticle);
+
+            // Also prepend to articlesInMemory to keep them in sync
+            articlesInMemory.unshift({ _id: result.insertedId.toString(), ...newRssArticle });
+
             feedAdded++;
             continue;
           } catch (err) {
@@ -469,6 +509,15 @@ app.put('/api/settings', async (req, res) => {
           },
           { upsert: true }
         );
+
+        // Also update settingsInMemory to keep them in sync
+        settingsInMemory = {
+          ...settingsInMemory,
+          pinnedHeroArticleId,
+          pinnedHeroType,
+          updatedAt: new Date(),
+        };
+
         res.json({ success: true });
         return;
       } catch (err) {
@@ -518,14 +567,19 @@ app.post('/api/users', async (req, res) => {
     const db = await getDb();
     if (db && !isInMemoryFallback) {
       try {
-        const result = await db.collection('users').insertOne({
+        const newUserObj = {
           name,
           email,
           role: role || 'Editor',
           status: status || 'Active',
           createdAt: new Date(),
-        });
-        res.json({ _id: result.insertedId, name, email, role, status });
+        };
+        const result = await db.collection('users').insertOne(newUserObj);
+
+        // Also add to usersInMemory to keep them in sync
+        usersInMemory.push({ _id: result.insertedId.toString(), ...newUserObj });
+
+        res.json({ _id: result.insertedId, ...newUserObj });
         return;
       } catch (err) {
         console.error('MongoDB user creation failed, switching to in-memory fallback:', err);
@@ -560,6 +614,20 @@ app.put('/api/users/:id', async (req, res) => {
           query as any,
           { $set: { name, email, role, status, updatedAt: new Date() } }
         );
+
+        // Also update usersInMemory to keep them in sync
+        const idx = usersInMemory.findIndex(u => u._id === id);
+        if (idx !== -1) {
+          usersInMemory[idx] = {
+            ...usersInMemory[idx],
+            name,
+            email,
+            role,
+            status,
+            updatedAt: new Date(),
+          };
+        }
+
         res.json({ success: true });
         return;
       } catch (err) {
@@ -594,6 +662,10 @@ app.delete('/api/users/:id', async (req, res) => {
         const query = id.length === 24 ? { _id: new ObjectId(id) } : { _id: id };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await db.collection('users').deleteOne(query as any);
+
+        // Also delete from usersInMemory to keep them in sync
+        usersInMemory = usersInMemory.filter(u => u._id !== id);
+
         res.json({ success: true });
         return;
       } catch (err) {
@@ -756,6 +828,10 @@ app.post('/api/articles', async (req, res) => {
         };
 
         const result = await db.collection('articles').insertOne(newArticle);
+
+        // Also add to in-memory fallback to keep them in sync
+        articlesInMemory.unshift({ _id: result.insertedId.toString(), ...newArticle });
+
         res.json({ _id: result.insertedId, ...newArticle });
         return;
       } catch (err) {
@@ -845,6 +921,17 @@ app.put('/api/articles/:id', async (req, res) => {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await db.collection('articles').updateOne(query as any, { $set: updateFields });
+
+        // Also update in-memory fallback to keep them in sync
+        const idx = articlesInMemory.findIndex(a => a._id === id || a.slug === id);
+        if (idx !== -1) {
+          articlesInMemory[idx] = {
+            ...articlesInMemory[idx],
+            ...updateFields,
+            updatedAt: new Date(),
+          };
+        }
+
         res.json({ success: true });
         return;
       } catch (err) {
@@ -892,6 +979,10 @@ app.delete('/api/articles/:id', async (req, res) => {
         const query = id.length === 24 ? { _id: new ObjectId(id) } : { slug: id };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await db.collection('articles').deleteOne(query as any);
+
+        // Also delete from in-memory fallback to keep them in sync
+        articlesInMemory = articlesInMemory.filter(a => a._id !== id && a.slug !== id);
+
         res.json({ success: true });
         return;
       } catch (err) {
